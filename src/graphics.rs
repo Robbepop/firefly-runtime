@@ -68,6 +68,8 @@ fn never_fails(_: Result<(), Infallible>) {}
 mod tests {
     use super::*;
     use crate::state::State;
+    use embedded_graphics::mock_display::MockDisplay;
+    use wasmi::Value::*;
 
     #[test]
     fn test_clear() {
@@ -82,7 +84,7 @@ mod tests {
             assert_eq!(byte, &0b_0000_0000);
         }
 
-        let inputs = [wasmi::Value::I32(1)];
+        let inputs = [I32(1)];
         let mut outputs = Vec::new();
         func.call(&mut store, &inputs, &mut outputs).unwrap();
         assert_eq!(outputs.len(), 0);
@@ -92,5 +94,39 @@ mod tests {
         for byte in state.frame.data() {
             assert_eq!(byte, &0b_0101_0101);
         }
+    }
+
+    #[test]
+    fn test_draw_line() {
+        let engine = wasmi::Engine::default();
+        let state = State::new();
+        let mut store = <wasmi::Store<State>>::new(&engine, state);
+        let func = wasmi::Func::wrap(&mut store, draw_line);
+
+        // ensure that the frame buffer is empty
+        let state = store.data();
+        for byte in state.frame.data() {
+            assert_eq!(byte, &0b_0000_0000);
+        }
+
+        let inputs = [I32(2), I32(1), I32(4), I32(3), I32(2), I32(1)];
+        let mut outputs = Vec::new();
+        func.call(&mut store, &inputs, &mut outputs).unwrap();
+        assert_eq!(outputs.len(), 0);
+
+        let mut display = MockDisplay::<Gray2>::new();
+        display.set_allow_out_of_bounds_drawing(true);
+        let state = store.data();
+        let area = Rectangle::new(Point::zero(), Size::new(6, 5));
+        let image = state.frame.as_image();
+        let image = image.sub_image(&area);
+        image.draw(&mut display).unwrap();
+        display.assert_pattern(&[
+            "000000", // y=0
+            "002000", // y=1
+            "000200", // y=2
+            "000020", // y=3
+            "000000", // y=4
+        ]);
     }
 }
