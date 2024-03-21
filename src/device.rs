@@ -1,6 +1,7 @@
-pub struct Device<Display, Delay, Storage>
+pub struct Device<Display, Color, Delay, Storage>
 where
-    Display: embedded_graphics::draw_target::DrawTarget,
+    Display: embedded_graphics::draw_target::DrawTarget<Color = Color>,
+    Color: embedded_graphics::pixelcolor::RgbColor,
     Delay: Fn(u32),
     Storage: embedded_storage::Storage,
 {
