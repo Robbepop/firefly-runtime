@@ -1,12 +1,17 @@
+use crate::color::ColorAdapter;
+use crate::color::FromRGB;
 use crate::device::{Device, Timer};
 use crate::linking::link;
 use crate::state::State;
+use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::image::ImageDrawable;
+use embedded_graphics::pixelcolor::RgbColor;
 
 pub struct Runtime<D, C, T, S>
 where
-    D: embedded_graphics::draw_target::DrawTarget<Color = C>,
-    C: embedded_graphics::pixelcolor::RgbColor,
+    D: DrawTarget<Color = C> + OriginDimensions,
+    C: RgbColor + FromRGB,
     T: Timer,
     S: embedded_storage::Storage,
 {
@@ -17,8 +22,8 @@ where
 
 impl<D, C, T, S> Runtime<D, C, T, S>
 where
-    D: embedded_graphics::draw_target::DrawTarget<Color = C>,
-    C: embedded_graphics::pixelcolor::RgbColor,
+    D: DrawTarget<Color = C> + OriginDimensions,
+    C: RgbColor + FromRGB,
     T: Timer,
     S: embedded_storage::Storage,
 {
@@ -88,10 +93,15 @@ where
         Ok(())
     }
 
-    fn flash_frame(&self) {
-        // let mut state = self.store.data_mut();
-        // let image = state.frame.as_image();
-        // image.draw(&mut self.device.display);
-        todo!();
+    /// Draw the frame buffer on the actual screen.
+    fn flash_frame(&mut self) {
+        let state = self.store.data();
+        let mut adapter = ColorAdapter {
+            state,
+            target: &mut self.device.display,
+        };
+        let image = state.frame.as_image();
+        // TODO: handle error
+        _ = image.draw(&mut adapter);
     }
 }

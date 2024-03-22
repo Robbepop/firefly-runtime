@@ -5,15 +5,17 @@ use embedded_graphics::prelude::DrawTarget;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Pixel;
 
-struct ColorAdapter<'a, C, D>
+/// Convert on the fly the Gray2 color into RGB using the palette.
+pub(crate) struct ColorAdapter<'a, C, D>
 where
     C: RgbColor + FromRGB,
     D: DrawTarget<Color = C> + OriginDimensions,
 {
-    state: &'a State,
-    target: D,
+    pub state: &'a State,
+    pub target: &'a mut D,
 }
 
+/// Required by the DrawTarget trait.
 impl<'a, C, D> OriginDimensions for ColorAdapter<'a, C, D>
 where
     C: RgbColor + FromRGB,
@@ -59,6 +61,11 @@ where
     }
 }
 
+/// Create RGB (or BGR) color from R, G, and B components.
+///
+/// All RGB colors implemented in embedded_graphics provide exactly the same
+/// new `method` but this method is not part of any trait.
+/// So, we have to make our own.
 pub trait FromRGB {
     fn from_rgb(r: u8, g: u8, b: u8) -> Self;
 }

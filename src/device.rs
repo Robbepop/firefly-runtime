@@ -1,7 +1,12 @@
+use crate::color::FromRGB;
+use embedded_graphics::{
+    draw_target::DrawTarget, geometry::OriginDimensions, pixelcolor::RgbColor,
+};
+
 pub struct Device<D, C, T, S>
 where
-    D: embedded_graphics::draw_target::DrawTarget<Color = C>,
-    C: embedded_graphics::pixelcolor::RgbColor,
+    D: DrawTarget<Color = C> + OriginDimensions,
+    C: RgbColor + FromRGB,
     T: Timer,
     S: embedded_storage::Storage,
 {
