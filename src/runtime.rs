@@ -1,31 +1,28 @@
-use crate::device::Device;
+use crate::device::{Device, Timer};
 use crate::linking::link;
 use crate::state::State;
 
-pub struct Runtime<Display, Color, Delay, Storage>
+pub struct Runtime<D, C, T, S>
 where
-    Display: embedded_graphics::draw_target::DrawTarget<Color = Color>,
-    Color: embedded_graphics::pixelcolor::RgbColor,
-    Delay: Fn(u32),
-    Storage: embedded_storage::Storage,
+    D: embedded_graphics::draw_target::DrawTarget<Color = C>,
+    C: embedded_graphics::pixelcolor::RgbColor,
+    T: Timer,
+    S: embedded_storage::Storage,
 {
-    device:   Device<Display, Color, Delay, Storage>,
+    device: Device<D, C, T, S>,
     instance: wasmi::Instance,
-    store:    wasmi::Store<State>,
+    store: wasmi::Store<State>,
 }
 
-impl<Display, Color, Delay, Storage> Runtime<Display, Color, Delay, Storage>
+impl<D, C, T, S> Runtime<D, C, T, S>
 where
-    Display: embedded_graphics::draw_target::DrawTarget<Color = Color>,
-    Color: embedded_graphics::pixelcolor::RgbColor,
-    Delay: Fn(u32),
-    Storage: embedded_storage::Storage,
+    D: embedded_graphics::draw_target::DrawTarget<Color = C>,
+    C: embedded_graphics::pixelcolor::RgbColor,
+    T: Timer,
+    S: embedded_storage::Storage,
 {
     /// Create a new runtime with the wasm module loaded and instantiated.
-    pub fn new(
-        device: Device<Display, Color, Delay, Storage>,
-        stream: impl wasmi::Read,
-    ) -> Result<Self, wasmi::Error> {
+    pub fn new(device: Device<D, C, T, S>, stream: impl wasmi::Read) -> Result<Self, wasmi::Error> {
         let engine = wasmi::Engine::default();
         let module = wasmi::Module::new(&engine, stream)?;
         let state = State::new();
@@ -44,7 +41,7 @@ where
 
     /// Run the game until exited or an error occurs.
     pub fn run(mut self) -> Result<(), wasmi::Error> {
-        _ = self.device.display.clear(Color::BLACK);
+        _ = self.device.display.clear(C::BLACK);
         self.start()?;
         let ins = self.instance;
         let update = ins.get_typed_func::<(), ()>(&self.store, "update").ok();
