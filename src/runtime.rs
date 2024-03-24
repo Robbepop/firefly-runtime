@@ -1,5 +1,5 @@
 use crate::color::{ColorAdapter, FromRGB};
-use crate::device::{Device, Timer};
+use crate::device::{Device, Storage, Timer};
 use crate::linking::link;
 use crate::state::State;
 use embedded_graphics::draw_target::DrawTarget;
@@ -7,27 +7,32 @@ use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::image::ImageDrawable;
 use embedded_graphics::pixelcolor::RgbColor;
 
-pub struct Runtime<D, C, T, S>
+pub struct Runtime<D, C, T, S, R>
 where
     D: DrawTarget<Color = C> + OriginDimensions,
     C: RgbColor + FromRGB,
     T: Timer,
-    S: embedded_storage::Storage,
+    S: Storage<R>,
+    R: embedded_io::Read,
 {
-    device:   Device<D, C, T, S>,
+    device:   Device<D, C, T, S, R>,
     instance: wasmi::Instance,
     store:    wasmi::Store<State>,
 }
 
-impl<D, C, T, S> Runtime<D, C, T, S>
+impl<D, C, T, S, R> Runtime<D, C, T, S, R>
 where
     D: DrawTarget<Color = C> + OriginDimensions,
     C: RgbColor + FromRGB,
     T: Timer,
-    S: embedded_storage::Storage,
+    S: Storage<R>,
+    R: embedded_io::Read,
 {
     /// Create a new runtime with the wasm module loaded and instantiated.
-    pub fn new(device: Device<D, C, T, S>, stream: impl wasmi::Read) -> Result<Self, wasmi::Error> {
+    pub fn new(
+        device: Device<D, C, T, S, R>,
+        stream: impl wasmi::Read,
+    ) -> Result<Self, wasmi::Error> {
         let engine = wasmi::Engine::default();
         let module = wasmi::Module::new(&engine, stream)?;
         let state = State::new();
