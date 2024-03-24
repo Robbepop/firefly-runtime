@@ -11,7 +11,7 @@ where
     C: RgbColor + FromRGB,
     T: Timer,
     S: Storage<R>,
-    R: embedded_io::Read,
+    R: embedded_io::Read + wasmi::Read,
 {
     pub display: D,
     pub timer:   T,
@@ -25,8 +25,10 @@ pub trait Timer {
     /// Should be precise enough for adjusting the delay between frames.
     ///
     /// Usually implemented as [rtic_time.Monotonic].
+    /// May also sometimes be implemented as [rtic_monotonic.Monotonic].
     ///
     /// [rtic_time.Monotonic]: https://docs.rs/rtic-time/latest/rtic_time/trait.Monotonic.html
+    /// [rtic_monotonic.Monotonic]: https://docs.rs/rtic-monotonic/latest/rtic_monotonic/trait.Monotonic.html
     fn now(&self) -> Instant<u32, 1, 1_000>;
 
     /// Suspends the current thread for the given duration.
@@ -44,12 +46,12 @@ pub trait Timer {
 /// Designed to work nicely with [embedded_sdmmc] and the stdlib filesystem.
 ///
 /// [embedded_sdmmc]: https://github.com/rust-embedded-community/embedded-sdmmc-rs
-pub trait Storage<R: embedded_io::Read> {
+pub trait Storage<R: embedded_io::Read + wasmi::Read> {
     /// Open a file for reading.
     ///
     /// The file path is given as a slice of path components.
     /// There are at least 2 components: the first one is the root directory
     /// (either "roms" or "data"), the last one is the file name,
     /// and everything in between are directory names if the file is nested.
-    fn open_file(&self, path: &[&str]) -> R;
+    fn open_file(&self, path: &[&str]) -> Option<R>;
 }

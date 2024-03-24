@@ -14,7 +14,7 @@ where
     C: RgbColor + FromRGB,
     T: Timer,
     S: Storage<R>,
-    R: embedded_io::Read,
+    R: embedded_io::Read + wasmi::Read,
 {
     device:   Device<D, C, T, S, R>,
     instance: wasmi::Instance,
@@ -27,14 +27,14 @@ where
     C: RgbColor + FromRGB,
     T: Timer,
     S: Storage<R>,
-    R: embedded_io::Read,
+    R: embedded_io::Read + wasmi::Read,
 {
     /// Create a new runtime with the wasm module loaded and instantiated.
-    pub fn new(
-        device: Device<D, C, T, S, R>,
-        stream: impl wasmi::Read,
-    ) -> Result<Self, wasmi::Error> {
+    pub fn new(device: Device<D, C, T, S, R>, cart_id: &str) -> Result<Self, wasmi::Error> {
         let engine = wasmi::Engine::default();
+        let path = &["roms", cart_id, "cart.wasm"];
+        // TODO: handle "file not found".
+        let stream = device.storage.open_file(path).unwrap();
         let module = wasmi::Module::new(&engine, stream)?;
         let state = State::new();
         let mut store = <wasmi::Store<State>>::new(&engine, state);
