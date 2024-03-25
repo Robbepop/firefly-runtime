@@ -31,7 +31,7 @@ pub trait Timer {
     ///
     /// [rtic_time.Monotonic]: https://docs.rs/rtic-time/latest/rtic_time/trait.Monotonic.html
     /// [rtic_monotonic.Monotonic]: https://docs.rs/rtic-monotonic/latest/rtic_monotonic/trait.Monotonic.html
-    fn now(&self) -> Instant<u32, 1, 1_000>;
+    fn now(&self) -> Instant<u32, 1, 1000>;
 
     /// Suspends the current thread for the given duration.
     ///
