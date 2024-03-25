@@ -62,12 +62,12 @@ pub trait Storage<R: embedded_io::Read + wasmi::Read> {
 }
 
 pub trait Input {
-    fn read_state(&self) -> InputState;
+    fn read_state(&mut self) -> Option<InputState>;
 }
 
+#[derive(Default)]
 pub struct InputState {
-    pub left:  Point,
-    pub right: Point,
+    pub left:  Option<Point>,
+    pub right: Option<Point>,
     pub menu:  bool,
-    pub lock:  bool,
 }
