@@ -74,7 +74,7 @@ where
     }
 
     /// Run the game until exited or an error occurs.
-    pub fn run(mut self) -> Result<(), wasmi::Error> {
+    pub fn run(mut self) -> Result<(), Error> {
         self.start()?;
         loop {
             self.update()?;
@@ -82,7 +82,7 @@ where
     }
 
     /// Call init functions in the module.
-    pub fn start(&mut self) -> Result<(), wasmi::Error> {
+    pub fn start(&mut self) -> Result<(), Error> {
         _ = self.device.display.clear(C::BLACK);
 
         let ins = self.instance;
@@ -108,7 +108,7 @@ where
     ///
     /// If there is not enough time passed since the last update,
     /// the update will be delayed to keep the expected frame rate.
-    pub fn update(&mut self) -> Result<(), wasmi::Error> {
+    pub fn update(&mut self) -> Result<(), Error> {
         if let Some(update) = self.update {
             // TODO: continue execution even if an update fails.
             update.call(&mut self.store, ())?;
