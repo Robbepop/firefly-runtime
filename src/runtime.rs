@@ -2,7 +2,7 @@ use crate::color::{ColorAdapter, FromRGB};
 use crate::device::*;
 use crate::linking::link;
 use crate::state::State;
-use crate::validators::valid_full_id;
+use crate::validators::valid_id;
 use crate::Error;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::OriginDimensions;
@@ -45,12 +45,19 @@ where
     R: embedded_io::Read + wasmi::Read,
 {
     /// Create a new runtime with the wasm module loaded and instantiated.
-    pub fn new(device: Device<D, C, T, I, S, R>, app_id: &str) -> Result<Self, Error> {
+    pub fn new(
+        device: Device<D, C, T, I, S, R>,
+        author_id: &str,
+        app_id: &str,
+    ) -> Result<Self, Error> {
         let engine = wasmi::Engine::default();
-        if !valid_full_id(app_id) {
-            return Err(Error::InvalidID);
+        if !valid_id(author_id) {
+            return Err(Error::InvalidAuthorID);
         }
-        let path = &["roms", app_id, "cart.wasm"];
+        if !valid_id(app_id) {
+            return Err(Error::InvalidAppID);
+        }
+        let path = &["roms", author_id, app_id, "cart.wasm"];
         let Some(stream) = device.storage.open_file(path) else {
             return Err(Error::FileNotFound);
         };
@@ -78,7 +85,7 @@ where
         &self.device.display
     }
 
-    /// Run the game until exited or an error occurs.
+    /// Run the app until exited or an error occurs.
     pub fn run(mut self) -> Result<(), Error> {
         self.start()?;
         loop {
@@ -110,7 +117,7 @@ where
         Ok(())
     }
 
-    /// Update the game state and flush the frame on the display.
+    /// Update the app state and flush the frame on the display.
     ///
     /// If there is not enough time passed since the last update,
     /// the update will be delayed to keep the expected frame rate.

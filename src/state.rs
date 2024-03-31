@@ -5,7 +5,7 @@ use embedded_graphics::pixelcolor::{Gray2, Rgb888};
 pub const WIDTH: usize = 240;
 pub const HEIGHT: usize = 160;
 const BUFFER_SIZE: usize = buffer_size::<Gray2>(WIDTH, HEIGHT);
-pub(crate) type Frame = Framebuffer<Gray2, RawU2, LittleEndian, WIDTH, HEIGHT, BUFFER_SIZE>;
+type Frame = Framebuffer<Gray2, RawU2, LittleEndian, WIDTH, HEIGHT, BUFFER_SIZE>;
 
 pub(crate) struct State {
     pub frame:   Frame,
