@@ -178,42 +178,53 @@ pub(crate) fn draw_image(
 
     let point = Point::new(x, y);
 
-    if bpp == 1 {
-        let image_raw = ImageRawLE::<BinaryColor>::new(image_bytes, width as u32);
-        let image = Image::new(&image_raw, point);
-        if transp >= 4 {
-            // Draw without transparency.
-            let mut two_bpp = BPPAdapter {
-                target: &mut state.frame,
-            };
-            never_fails(image.draw(&mut two_bpp));
-        } else {
-            // Draw with transparency using adapter.
+    let is_transp = transp < 4;
+    match (bpp, is_transp) {
+        (1, true) => {
             let mut adapter = TransparencyAdapter {
                 target:      &mut state.frame,
                 transparent: Gray2::new(transp as u8),
             };
-            let mut two_bpp = BPPAdapter {
-                target: &mut adapter,
+            draw_1bpp(image_bytes, width, point, &mut adapter);
+        }
+        (1, false) => {
+            draw_1bpp(image_bytes, width, point, &mut state.frame);
+        }
+        (2, true) => {
+            let mut adapter = TransparencyAdapter {
+                target:      &mut state.frame,
+                transparent: Gray2::new(transp as u8),
             };
-            never_fails(image.draw(&mut two_bpp));
-        };
-        return;
+            draw_2bpp(image_bytes, width, point, &mut adapter);
+        }
+        (2, false) => {
+            draw_2bpp(image_bytes, width, point, &mut state.frame);
+        }
+        (_, _) => {
+            // TODO: log "bad BPP" error message
+        }
     }
 
+    // TODO: log bad bpp value (not 1 or 2).
+}
+
+fn draw_1bpp<T>(image_bytes: &[u8], width: i32, point: Point, target: &mut T)
+where
+    T: DrawTarget<Color = Gray2, Error = Infallible> + OriginDimensions,
+{
+    let image_raw = ImageRawLE::<BinaryColor>::new(image_bytes, width as u32);
+    let image = Image::new(&image_raw, point);
+    let mut adapter = BPPAdapter { target };
+    never_fails(image.draw(&mut adapter));
+}
+
+fn draw_2bpp<T>(image_bytes: &[u8], width: i32, point: Point, target: &mut T)
+where
+    T: DrawTarget<Color = Gray2, Error = Infallible> + OriginDimensions,
+{
     let image_raw = ImageRawLE::<Gray2>::new(image_bytes, width as u32);
     let image = Image::new(&image_raw, point);
-    if transp >= 4 {
-        // Draw without transparency.
-        never_fails(image.draw(&mut state.frame));
-    } else {
-        // Draw with transparency using adapter.
-        let mut adapter = TransparencyAdapter {
-            target:      &mut state.frame,
-            transparent: Gray2::new(transp as u8),
-        };
-        never_fails(image.draw(&mut adapter));
-    };
+    never_fails(image.draw(target));
 }
 
 fn get_shape_style(fill_color: u32, stroke_color: u32, stroke_width: u32) -> PrimitiveStyle<Gray2> {
