@@ -1,8 +1,8 @@
-use crate::color::TransparencyAdapter;
+use crate::color::{BPPAdapter, TransparencyAdapter};
 use crate::state::{State, HEIGHT, WIDTH};
 use core::convert::Infallible;
 use embedded_graphics::image::{Image, ImageRawLE};
-use embedded_graphics::pixelcolor::{Gray2, Rgb888};
+use embedded_graphics::pixelcolor::{BinaryColor, Gray2, Rgb888};
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::*;
 
@@ -163,6 +163,7 @@ pub(crate) fn draw_image(
     len: i32,
     width: i32,
     transp: i32,
+    bpp: i32,
 ) {
     // retrieve the raw data from memory
     let state = caller.data_mut();
@@ -176,6 +177,30 @@ pub(crate) fn draw_image(
     let image_bytes = &data[ptr..len];
 
     let point = Point::new(x, y);
+
+    if bpp == 1 {
+        let image_raw = ImageRawLE::<BinaryColor>::new(image_bytes, width as u32);
+        let image = Image::new(&image_raw, point);
+        if transp >= 4 {
+            // Draw without transparency.
+            let mut two_bpp = BPPAdapter {
+                target: &mut state.frame,
+            };
+            never_fails(image.draw(&mut two_bpp));
+        } else {
+            // Draw with transparency using adapter.
+            let mut adapter = TransparencyAdapter {
+                target:      &mut state.frame,
+                transparent: Gray2::new(transp as u8),
+            };
+            let mut two_bpp = BPPAdapter {
+                target: &mut adapter,
+            };
+            never_fails(image.draw(&mut two_bpp));
+        };
+        return;
+    }
+
     let image_raw = ImageRawLE::<Gray2>::new(image_bytes, width as u32);
     let image = Image::new(&image_raw, point);
     if transp >= 4 {

@@ -123,14 +123,11 @@ where
     type Color = BinaryColor;
     type Error = D::Error;
 
-    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    fn draw_iter<I>(&mut self, _pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
-        let iter = pixels
-            .into_iter()
-            .map(|Pixel(p, c)| Pixel(p, Gray2::new(c.into_storage())));
-        self.target.draw_iter(iter)
+        panic!("not implemented, use BPPAdapter.fill_contiguous instead")
     }
 
     fn fill_contiguous<I>(&mut self, area: &Rectangle, colors: I) -> Result<(), Self::Error>
