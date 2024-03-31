@@ -98,6 +98,50 @@ where
     }
 }
 
+// Convert 1 bit per pixel image into 2 bits par pixel.
+pub(crate) struct BPPAdapter<'a, D>
+where
+    D: DrawTarget<Color = Gray2> + OriginDimensions,
+{
+    pub target: &'a mut D,
+}
+
+/// Required by the DrawTarget trait.
+impl<'a, D> OriginDimensions for BPPAdapter<'a, D>
+where
+    D: DrawTarget<Color = Gray2> + OriginDimensions,
+{
+    fn size(&self) -> embedded_graphics::prelude::Size {
+        self.target.size()
+    }
+}
+
+impl<'a, D> DrawTarget for BPPAdapter<'a, D>
+where
+    D: DrawTarget<Color = Gray2> + OriginDimensions,
+{
+    type Color = BinaryColor;
+    type Error = D::Error;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        let iter = pixels
+            .into_iter()
+            .map(|Pixel(p, c)| Pixel(p, Gray2::new(c.into_storage())));
+        self.target.draw_iter(iter)
+    }
+
+    fn fill_contiguous<I>(&mut self, area: &Rectangle, colors: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Self::Color>,
+    {
+        let iter = colors.into_iter().map(|c| Gray2::new(c.into_storage()));
+        self.target.fill_contiguous(area, iter)
+    }
+}
+
 /// Create RGB (or BGR) color from R, G, and B components.
 ///
 /// All RGB colors implemented in embedded_graphics provide exactly the same
