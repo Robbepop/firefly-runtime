@@ -180,6 +180,7 @@ pub(crate) fn draw_image(
 
     let is_transp = transp < 4;
     match (bpp, is_transp) {
+        // 1BPP, transparent
         (1, true) => {
             let mut adapter = TransparencyAdapter {
                 target:      &mut state.frame,
@@ -187,9 +188,11 @@ pub(crate) fn draw_image(
             };
             draw_1bpp(image_bytes, width, point, &mut adapter);
         }
+        // 1BPP, no transparency
         (1, false) => {
             draw_1bpp(image_bytes, width, point, &mut state.frame);
         }
+        // 2BPP, transparent
         (2, true) => {
             let mut adapter = TransparencyAdapter {
                 target:      &mut state.frame,
@@ -197,15 +200,15 @@ pub(crate) fn draw_image(
             };
             draw_2bpp(image_bytes, width, point, &mut adapter);
         }
+        // 2BPP, no transparency
         (2, false) => {
             draw_2bpp(image_bytes, width, point, &mut state.frame);
         }
+        // unexpected BPP
         (_, _) => {
             // TODO: log "bad BPP" error message
         }
     }
-
-    // TODO: log bad bpp value (not 1 or 2).
 }
 
 fn draw_1bpp<T>(image_bytes: &[u8], width: i32, point: Point, target: &mut T)
