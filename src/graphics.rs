@@ -155,8 +155,28 @@ pub(crate) fn draw_triangle(
     never_fails(triangle.draw_styled(&style, &mut state.frame));
 }
 
+pub(crate) fn draw_sub_image(
+    caller: C,
+    ptr: i32,
+    len: i32,
+    x: i32,
+    y: i32,
+    width: i32,
+    transp: i32,
+    bpp: i32,
+    sub_x: i32,
+    sub_y: i32,
+    sub_width: i32,
+    sub_height: i32,
+) {
+    let sub_point = Point::new(sub_x, sub_y);
+    let sub_size = Size::new(sub_width as u32, sub_height as u32);
+    let sub = Rectangle::new(sub_point, sub_size);
+    draw_image_inner(caller, ptr, len, x, y, width, transp, bpp, Some(sub))
+}
+
 pub(crate) fn draw_image(
-    mut caller: C,
+    caller: C,
     x: i32,
     y: i32,
     ptr: i32,
@@ -164,6 +184,20 @@ pub(crate) fn draw_image(
     width: i32,
     transp: i32,
     bpp: i32,
+) {
+    draw_image_inner(caller, ptr, len, x, y, width, transp, bpp, None)
+}
+
+pub(crate) fn draw_image_inner(
+    mut caller: C,
+    ptr: i32,
+    len: i32,
+    x: i32,
+    y: i32,
+    width: i32,
+    transp: i32,
+    bpp: i32,
+    sub: Option<Rectangle>,
 ) {
     // retrieve the raw data from memory
     let state = caller.data_mut();
@@ -177,7 +211,6 @@ pub(crate) fn draw_image(
     let image_bytes = &data[ptr..len];
 
     let point = Point::new(x, y);
-
     let is_transp = transp < 4;
     match (bpp, is_transp) {
         // 1BPP, transparent
@@ -186,11 +219,11 @@ pub(crate) fn draw_image(
                 target:      &mut state.frame,
                 transparent: Gray2::new(transp as u8),
             };
-            draw_1bpp(image_bytes, width, point, &mut adapter);
+            draw_1bpp(image_bytes, width, point, sub, &mut adapter);
         }
         // 1BPP, no transparency
         (1, false) => {
-            draw_1bpp(image_bytes, width, point, &mut state.frame);
+            draw_1bpp(image_bytes, width, point, sub, &mut state.frame);
         }
         // 2BPP, transparent
         (2, true) => {
@@ -198,11 +231,11 @@ pub(crate) fn draw_image(
                 target:      &mut state.frame,
                 transparent: Gray2::new(transp as u8),
             };
-            draw_2bpp(image_bytes, width, point, &mut adapter);
+            draw_2bpp(image_bytes, width, point, sub, &mut adapter);
         }
         // 2BPP, no transparency
         (2, false) => {
-            draw_2bpp(image_bytes, width, point, &mut state.frame);
+            draw_2bpp(image_bytes, width, point, sub, &mut state.frame);
         }
         // unexpected BPP
         (_, _) => {
@@ -211,23 +244,51 @@ pub(crate) fn draw_image(
     }
 }
 
-fn draw_1bpp<T>(image_bytes: &[u8], width: i32, point: Point, target: &mut T)
-where
+fn draw_1bpp<T>(
+    image_bytes: &[u8],
+    width: i32,
+    point: Point,
+    sub: Option<Rectangle>,
+    target: &mut T,
+) where
     T: DrawTarget<Color = Gray2, Error = Infallible> + OriginDimensions,
 {
     let image_raw = ImageRawLE::<BinaryColor>::new(image_bytes, width as u32);
-    let image = Image::new(&image_raw, point);
     let mut adapter = BPPAdapter { target };
-    never_fails(image.draw(&mut adapter));
+    match sub {
+        Some(sub) => {
+            let image_raw = image_raw.sub_image(&sub);
+            let image = Image::new(&image_raw, point);
+            never_fails(image.draw(&mut adapter));
+        }
+        None => {
+            let image = Image::new(&image_raw, point);
+            never_fails(image.draw(&mut adapter));
+        }
+    }
 }
 
-fn draw_2bpp<T>(image_bytes: &[u8], width: i32, point: Point, target: &mut T)
-where
+fn draw_2bpp<T>(
+    image_bytes: &[u8],
+    width: i32,
+    point: Point,
+    sub: Option<Rectangle>,
+    target: &mut T,
+) where
     T: DrawTarget<Color = Gray2, Error = Infallible> + OriginDimensions,
 {
     let image_raw = ImageRawLE::<Gray2>::new(image_bytes, width as u32);
-    let image = Image::new(&image_raw, point);
-    never_fails(image.draw(target));
+    match sub {
+        Some(sub) => {
+            let image_raw = image_raw.sub_image(&sub);
+            let image = Image::new(&image_raw, point);
+            never_fails(image.draw(target));
+        }
+        None => {
+            let image = Image::new(&image_raw, point);
+            never_fails(image.draw(target));
+        }
+    }
 }
 
 fn get_shape_style(fill_color: u32, stroke_color: u32, stroke_width: u32) -> PrimitiveStyle<Gray2> {
