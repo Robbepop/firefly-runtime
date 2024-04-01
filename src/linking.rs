@@ -10,9 +10,12 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error
     linker.func_wrap("graphics", "draw_point", graphics::draw_point)?;
     linker.func_wrap("graphics", "draw_line", graphics::draw_line)?;
     linker.func_wrap("graphics", "draw_rect", graphics::draw_rect)?;
+    linker.func_wrap("graphics", "draw_rounded_rect", graphics::draw_rounded_rect)?;
     linker.func_wrap("graphics", "draw_circle", graphics::draw_circle)?;
     linker.func_wrap("graphics", "draw_ellipse", graphics::draw_ellipse)?;
     linker.func_wrap("graphics", "draw_triangle", graphics::draw_triangle)?;
+    linker.func_wrap("graphics", "draw_arc", graphics::draw_arc)?;
+    linker.func_wrap("graphics", "draw_sector", graphics::draw_sector)?;
     linker.func_wrap("graphics", "draw_image", graphics::draw_image)?;
     linker.func_wrap("graphics", "draw_sub_image", graphics::draw_sub_image)?;
     Ok(())

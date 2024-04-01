@@ -83,18 +83,41 @@ pub(crate) fn draw_rect(
     mut caller: C,
     x: i32,
     y: i32,
-    width: i32,
-    height: i32,
+    width: u32,
+    height: u32,
     fill_color: u32,
     stroke_color: u32,
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
     let point = Point::new(x, y);
-    let size = Size::new(width as u32, height as u32);
+    let size = Size::new(width, height);
     let rect = Rectangle::new(point, size);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
     never_fails(rect.draw_styled(&style, &mut state.frame));
+}
+
+// Draw a rectangle with rounded corners.
+pub(crate) fn draw_rounded_rect(
+    mut caller: C,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    corner_width: u32,
+    corner_height: u32,
+    fill_color: u32,
+    stroke_color: u32,
+    stroke_width: u32,
+) {
+    let state = caller.data_mut();
+    let point = Point::new(x, y);
+    let size = Size::new(width, height);
+    let rect = Rectangle::new(point, size);
+    let corner = Size::new(corner_width, corner_height);
+    let rounded = RoundedRectangle::with_equal_corners(rect, corner);
+    let style = get_shape_style(fill_color, stroke_color, stroke_width);
+    never_fails(rounded.draw_styled(&style, &mut state.frame));
 }
 
 /// Draw a circle.
@@ -102,7 +125,7 @@ pub(crate) fn draw_circle(
     mut caller: C,
     x: i32,
     y: i32,
-    diameter: i32,
+    diameter: u32,
     fill_color: u32,
     stroke_color: u32,
     stroke_width: u32,
@@ -110,7 +133,7 @@ pub(crate) fn draw_circle(
     let state = caller.data_mut();
     let top_left = Point::new(x, y);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
-    let circle = Circle::new(top_left, diameter as u32);
+    let circle = Circle::new(top_left, diameter);
     never_fails(circle.draw_styled(&style, &mut state.frame));
 }
 
@@ -119,15 +142,15 @@ pub(crate) fn draw_ellipse(
     mut caller: C,
     x: i32,
     y: i32,
-    width: i32,
-    height: i32,
+    width: u32,
+    height: u32,
     fill_color: u32,
     stroke_color: u32,
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
     let top_left = Point::new(x, y);
-    let size = Size::new(width as u32, height as u32);
+    let size = Size::new(width, height);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
     let ellipse = Ellipse::new(top_left, size);
     never_fails(ellipse.draw_styled(&style, &mut state.frame));
@@ -155,22 +178,64 @@ pub(crate) fn draw_triangle(
     never_fails(triangle.draw_styled(&style, &mut state.frame));
 }
 
+/// Draw an arc.
+pub(crate) fn draw_arc(
+    mut caller: C,
+    x: i32,
+    y: i32,
+    diameter: u32,
+    angle_start: i32,
+    angle_sweep: i32,
+    fill_color: u32,
+    stroke_color: u32,
+    stroke_width: u32,
+) {
+    let state = caller.data_mut();
+    let point = Point::new(x, y);
+    let angle_start = Angle::from_degrees(angle_start as f32);
+    let angle_sweep = Angle::from_degrees(angle_sweep as f32);
+    let style = get_shape_style(fill_color, stroke_color, stroke_width);
+    let arc = Arc::new(point, diameter, angle_start, angle_sweep);
+    never_fails(arc.draw_styled(&style, &mut state.frame));
+}
+
+/// Draw a sector.
+pub(crate) fn draw_sector(
+    mut caller: C,
+    x: i32,
+    y: i32,
+    diameter: u32,
+    angle_start: i32,
+    angle_sweep: i32,
+    fill_color: u32,
+    stroke_color: u32,
+    stroke_width: u32,
+) {
+    let state = caller.data_mut();
+    let point = Point::new(x, y);
+    let angle_start = Angle::from_degrees(angle_start as f32);
+    let angle_sweep = Angle::from_degrees(angle_sweep as f32);
+    let style = get_shape_style(fill_color, stroke_color, stroke_width);
+    let arc = Sector::new(point, diameter, angle_start, angle_sweep);
+    never_fails(arc.draw_styled(&style, &mut state.frame));
+}
+
 pub(crate) fn draw_sub_image(
     caller: C,
     ptr: i32,
     len: i32,
     x: i32,
     y: i32,
-    width: i32,
+    width: u32,
     transp: i32,
     bpp: i32,
     sub_x: i32,
     sub_y: i32,
-    sub_width: i32,
-    sub_height: i32,
+    sub_width: u32,
+    sub_height: u32,
 ) {
     let sub_point = Point::new(sub_x, sub_y);
-    let sub_size = Size::new(sub_width as u32, sub_height as u32);
+    let sub_size = Size::new(sub_width, sub_height);
     let sub = Rectangle::new(sub_point, sub_size);
     draw_image_inner(caller, ptr, len, x, y, width, transp, bpp, Some(sub))
 }
@@ -181,7 +246,7 @@ pub(crate) fn draw_image(
     y: i32,
     ptr: i32,
     len: i32,
-    width: i32,
+    width: u32,
     transp: i32,
     bpp: i32,
 ) {
@@ -194,7 +259,7 @@ pub(crate) fn draw_image_inner(
     len: i32,
     x: i32,
     y: i32,
-    width: i32,
+    width: u32,
     transp: i32,
     bpp: i32,
     sub: Option<Rectangle>,
@@ -246,14 +311,14 @@ pub(crate) fn draw_image_inner(
 
 fn draw_1bpp<T>(
     image_bytes: &[u8],
-    width: i32,
+    width: u32,
     point: Point,
     sub: Option<Rectangle>,
     target: &mut T,
 ) where
     T: DrawTarget<Color = Gray2, Error = Infallible> + OriginDimensions,
 {
-    let image_raw = ImageRawLE::<BinaryColor>::new(image_bytes, width as u32);
+    let image_raw = ImageRawLE::<BinaryColor>::new(image_bytes, width);
     let mut adapter = BPPAdapter { target };
     match sub {
         Some(sub) => {
@@ -270,14 +335,14 @@ fn draw_1bpp<T>(
 
 fn draw_2bpp<T>(
     image_bytes: &[u8],
-    width: i32,
+    width: u32,
     point: Point,
     sub: Option<Rectangle>,
     target: &mut T,
 ) where
     T: DrawTarget<Color = Gray2, Error = Infallible> + OriginDimensions,
 {
-    let image_raw = ImageRawLE::<Gray2>::new(image_bytes, width as u32);
+    let image_raw = ImageRawLE::<Gray2>::new(image_bytes, width);
     match sub {
         Some(sub) => {
             let image_raw = image_raw.sub_image(&sub);
