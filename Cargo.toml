@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+firefly-meta = { path = "../firefly-meta" }
 embedded-graphics = "0.8.1"
 embedded-graphics-transform = "0.1.0"
 embedded-hal = { version = "1.0.0", default-features = false }

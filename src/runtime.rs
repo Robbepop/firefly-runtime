@@ -2,12 +2,12 @@ use crate::color::{ColorAdapter, FromRGB};
 use crate::device::*;
 use crate::linking::link;
 use crate::state::State;
-use crate::validators::valid_id;
 use crate::Error;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::image::ImageDrawable;
 use embedded_graphics::pixelcolor::RgbColor;
+use firefly_meta::valid_id;
 use fugit::ExtU32;
 
 /// Default frames per second.
