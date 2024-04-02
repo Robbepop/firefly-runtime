@@ -38,7 +38,7 @@ where
 {
     /// Create a new runtime with the wasm module loaded and instantiated.
     pub fn new(
-        device: DeviceImpl<'static>,
+        device: DeviceImpl,
         display: D,
         author_id: &str,
         app_id: &str,

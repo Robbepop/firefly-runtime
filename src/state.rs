@@ -9,14 +9,14 @@ const BUFFER_SIZE: usize = buffer_size::<Gray2>(WIDTH, HEIGHT);
 type Frame = Framebuffer<Gray2, RawU2, LittleEndian, WIDTH, HEIGHT, BUFFER_SIZE>;
 
 pub(crate) struct State {
-    pub device:  DeviceImpl<'static>,
+    pub device:  DeviceImpl,
     pub frame:   Frame,
     pub palette: [Rgb888; 4],
     pub memory:  Option<wasmi::Memory>,
 }
 
 impl State {
-    pub(crate) fn new(device: DeviceImpl<'static>) -> Self {
+    pub(crate) fn new(device: DeviceImpl) -> Self {
         Self {
             device,
             frame: Framebuffer::new(),
