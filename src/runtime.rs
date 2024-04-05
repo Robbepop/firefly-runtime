@@ -56,7 +56,7 @@ where
         };
         let module = wasmi::Module::new(&engine, stream)?;
         let now = device.now();
-        let state = State::new(device);
+        let state = State::new(author_id, app_id, device);
         let mut store = wasmi::Store::<State>::new(&engine, state);
         let mut linker = wasmi::Linker::<State>::new(&engine);
         link(&mut linker)?;

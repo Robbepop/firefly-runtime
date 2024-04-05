@@ -517,7 +517,7 @@ mod tests {
     fn test_clear() {
         let engine = wasmi::Engine::default();
         let device = DeviceImpl::new("/tmp");
-        let state = State::new(device);
+        let state = State::new("au", "ap", device);
         let mut store = <wasmi::Store<State>>::new(&engine, state);
         let func = wasmi::Func::wrap(&mut store, clear);
 
@@ -543,7 +543,7 @@ mod tests {
     fn test_draw_line() {
         let engine = wasmi::Engine::default();
         let device = DeviceImpl::new("/tmp");
-        let state = State::new(device);
+        let state = State::new("au", "ap", device);
         let mut store = <wasmi::Store<State>>::new(&engine, state);
         let func = wasmi::Func::wrap(&mut store, draw_line);
 

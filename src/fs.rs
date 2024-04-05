@@ -29,7 +29,7 @@ pub(crate) fn load_rom_file(
     let Ok(name) = core::str::from_utf8(name_bytes) else {
         return 0;
     };
-    let path = &["roms", "a", "b", name];
+    let path = &["roms", &state.author_id, &state.app_id, name];
     let Some(mut file) = state.device.open_file(path) else {
         return 0;
     };
