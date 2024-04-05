@@ -1,8 +1,8 @@
 use crate::color::{BPPAdapter, TransparencyAdapter};
 use crate::state::{State, HEIGHT, WIDTH};
 use core::convert::Infallible;
-use embedded_graphics::image::{Image, ImageRawLE};
-use embedded_graphics::mono_font::{MonoFont, MonoTextStyle};
+use embedded_graphics::image::{Image, ImageRaw, ImageRawLE};
+use embedded_graphics::mono_font::{mapping, DecorationDimensions, MonoFont, MonoTextStyle};
 use embedded_graphics::pixelcolor::{BinaryColor, Gray2, Rgb888};
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::*;
@@ -451,17 +451,52 @@ fn get_bytes<'b>(
     Some((state, bytes))
 }
 
-fn parse_font(font_bytes: &[u8]) -> Option<MonoFont> {
+/// Load mono font from the firefly format.
+fn parse_font(bytes: &[u8]) -> Option<MonoFont> {
+    if bytes.len() < 21 {
+        return None;
+    }
+
+    // read the header
+    let encoding_index = read_u32(bytes, 1);
+    let char_width = read_u32(bytes, 5);
+    let char_height = read_u32(bytes, 9);
+    let baseline = read_u32(bytes, 13);
+    let image_width = read_u32(bytes, 17);
+    let image = ImageRaw::new(&bytes[21..], image_width);
+
+    let glyph_mapping: &dyn mapping::GlyphMapping = match encoding_index {
+        0x0 => &mapping::ASCII,       // ASCII
+        0x1 => &mapping::ISO_8859_1,  // Latin-1, Western European.
+        0x2 => &mapping::ISO_8859_2,  // Latin-2, Central European.
+        0x3 => &mapping::ISO_8859_3,  // Latin-3, South European.
+        0x4 => &mapping::ISO_8859_4,  // Latin-4, North European.
+        0x5 => &mapping::ISO_8859_9,  // Latin-5, Turkish.
+        0x6 => &mapping::ISO_8859_10, // Latin-6, Nordic.
+        0x7 => &mapping::ISO_8859_13, // Latin-7, Baltic Rim.
+        0x8 => &mapping::ISO_8859_14, // Latin-8, Celtic.
+        0x9 => &mapping::ISO_8859_15, // Latin-9 (revised Latin-1).
+        0xa => &mapping::ISO_8859_16, // Latin-10: South-East European.
+        0xb => &mapping::ISO_8859_5,  // Latin/Cyrillic.
+        0xc => &mapping::ISO_8859_7,  // Latin/Greek.
+        0xd => &mapping::JIS_X0201,   // Japanese katakana (halfwidth).
+        _ => return None,
+    };
     let font = MonoFont {
-        image:             todo!(),
-        character_size:    todo!(),
-        character_spacing: todo!(),
-        baseline:          todo!(),
-        strikethrough:     todo!(),
-        underline:         todo!(),
-        glyph_mapping:     todo!(),
+        image,
+        character_size: Size::new(char_width, char_height),
+        character_spacing: 0,
+        baseline,
+        strikethrough: DecorationDimensions::new(char_height / 2, 1),
+        underline: DecorationDimensions::new(baseline + 2, 1),
+        glyph_mapping,
     };
     Some(font)
+}
+
+/// Read little-endian u32 from the slice at the given index.
+fn read_u32(bytes: &[u8], s: usize) -> u32 {
+    u32::from_le_bytes(bytes[s..].try_into().unwrap())
 }
 
 /// Statically ensure that the given Result cannot have an error.
