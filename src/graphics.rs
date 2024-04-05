@@ -453,17 +453,17 @@ fn get_bytes<'b>(
 
 /// Load mono font from the firefly format.
 fn parse_font(bytes: &[u8]) -> Option<MonoFont> {
-    if bytes.len() < 21 {
+    if bytes.len() < 7 {
         return None;
     }
 
     // read the header
-    let encoding_index = read_u32(bytes, 1);
-    let char_width = read_u32(bytes, 5);
-    let char_height = read_u32(bytes, 9);
-    let baseline = read_u32(bytes, 13);
-    let image_width = read_u32(bytes, 17);
-    let image = ImageRaw::new(&bytes[21..], image_width);
+    let encoding_index = read_u8(bytes, 1) as u32;
+    let char_width = read_u8(bytes, 2) as u32;
+    let char_height = read_u8(bytes, 3) as u32;
+    let baseline = read_u8(bytes, 4) as u32;
+    let image_width = read_u16(bytes, 5) as u32;
+    let image = ImageRaw::new(&bytes[7..], image_width);
 
     let glyph_mapping: &dyn mapping::GlyphMapping = match encoding_index {
         0x0 => &mapping::ASCII,       // ASCII
@@ -495,8 +495,13 @@ fn parse_font(bytes: &[u8]) -> Option<MonoFont> {
 }
 
 /// Read little-endian u32 from the slice at the given index.
-fn read_u32(bytes: &[u8], s: usize) -> u32 {
-    u32::from_le_bytes(bytes[s..].try_into().unwrap())
+fn read_u8(bytes: &[u8], s: usize) -> u8 {
+    u8::from_le_bytes([bytes[s]])
+}
+
+/// Read little-endian u32 from the slice at the given index.
+fn read_u16(bytes: &[u8], s: usize) -> u16 {
+    u16::from_le_bytes(bytes[s..].try_into().unwrap())
 }
 
 /// Statically ensure that the given Result cannot have an error.
