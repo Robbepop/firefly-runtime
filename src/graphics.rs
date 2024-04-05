@@ -270,13 +270,21 @@ pub(crate) fn draw_text(
     }
 
     let Some(text_bytes) = &data.get(text_ptr..(text_ptr + text_len)) else {
+        let msg = "text points outside of memory";
+        state.device.log_error("graphics.draw_text", msg);
         return;
     };
     let Some(font_bytes) = &data.get(font_ptr..(font_ptr + font_len)) else {
+        let msg = "font points outside of memory";
+        state.device.log_error("graphics.draw_text", msg);
         return;
     };
-    let Some(font) = parse_font(font_bytes) else {
-        return;
+    let font = match parse_font(font_bytes) {
+        Ok(font) => font,
+        Err(err) => {
+            state.device.log_error("graphics.draw_text", err);
+            return;
+        }
     };
     let color = Gray2::new(color as u8 - 1);
     let style = MonoTextStyle::new(&font, color);
@@ -450,9 +458,9 @@ fn get_bytes<'b>(
 }
 
 /// Load mono font from the firefly format.
-fn parse_font(bytes: &[u8]) -> Option<MonoFont> {
+fn parse_font(bytes: &[u8]) -> Result<MonoFont, &str> {
     if bytes.len() < 7 {
-        return None;
+        return Err("file too short");
     }
 
     // read the header
@@ -478,7 +486,7 @@ fn parse_font(bytes: &[u8]) -> Option<MonoFont> {
         0xb => &mapping::ISO_8859_5,  // Latin/Cyrillic.
         0xc => &mapping::ISO_8859_7,  // Latin/Greek.
         0xd => &mapping::JIS_X0201,   // Japanese katakana (halfwidth).
-        _ => return None,
+        _ => return Err("uknown mapping"),
     };
     let font = MonoFont {
         image,
@@ -489,7 +497,7 @@ fn parse_font(bytes: &[u8]) -> Option<MonoFont> {
         underline: DecorationDimensions::new(baseline + 2, 1),
         glyph_mapping,
     };
-    Some(font)
+    Ok(font)
 }
 
 /// Read little-endian u32 from the slice at the given index.
