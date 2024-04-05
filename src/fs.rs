@@ -1,6 +1,7 @@
 use crate::state::State;
 use embedded_io::Read;
 use firefly_device::Device;
+use firefly_meta::valid_path_part;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
@@ -24,19 +25,35 @@ pub(crate) fn load_rom_file(
     let buf_len = buf_len as usize;
 
     let Some(name_bytes) = &data.get(path_ptr..(path_ptr + path_len)) else {
+        let msg = "file name points out of memory";
+        state.device.log_error("fs", msg);
         return 0;
     };
     let Ok(name) = core::str::from_utf8(name_bytes) else {
+        let msg = "file name is not valid UTF-8";
+        state.device.log_error("fs", msg);
         return 0;
     };
+    if !valid_path_part(name) {
+        let msg = "file name is not allowed";
+        state.device.log_error("fs", msg);
+        state.device.log_error("fs", name);
+        return 0;
+    }
     let path = &["roms", &state.author_id, &state.app_id, name];
     let Some(mut file) = state.device.open_file(path) else {
+        let msg = "cannot open file";
+        state.device.log_error("fs", msg);
         return 0;
     };
     let Some(buf) = data.get_mut(buf_ptr..(buf_ptr + buf_len)) else {
+        let msg = "buffer for file points out of memory";
+        state.device.log_error("fs", msg);
         return 0;
     };
     let Ok(file_size) = file.read(buf) else {
+        let msg = "cannot read file";
+        state.device.log_error("fs", msg);
         return 0;
     };
     file_size as u32
