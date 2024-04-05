@@ -292,9 +292,6 @@ pub(crate) fn draw_sub_image(
     len: u32,
     x: i32,
     y: i32,
-    width: u32,
-    transp: i32,
-    bpp: i32,
     sub_x: i32,
     sub_y: i32,
     sub_width: u32,
@@ -303,20 +300,11 @@ pub(crate) fn draw_sub_image(
     let sub_point = Point::new(sub_x, sub_y);
     let sub_size = Size::new(sub_width, sub_height);
     let sub = Rectangle::new(sub_point, sub_size);
-    draw_image_inner(caller, ptr, len, x, y, width, transp, bpp, Some(sub))
+    draw_image_inner(caller, ptr, len, x, y, Some(sub))
 }
 
-pub(crate) fn draw_image(
-    caller: C,
-    ptr: u32,
-    len: u32,
-    x: i32,
-    y: i32,
-    width: u32,
-    transp: i32,
-    bpp: i32,
-) {
-    draw_image_inner(caller, ptr, len, x, y, width, transp, bpp, None)
+pub(crate) fn draw_image(caller: C, ptr: u32, len: u32, x: i32, y: i32) {
+    draw_image_inner(caller, ptr, len, x, y, None)
 }
 
 pub(crate) fn draw_image_inner(
@@ -325,15 +313,21 @@ pub(crate) fn draw_image_inner(
     len: u32,
     x: i32,
     y: i32,
-    width: u32,
-    transp: i32,
-    bpp: i32,
     sub: Option<Rectangle>,
 ) {
     // retrieve the raw data from memory
     let Some((state, image_bytes)) = get_bytes(&mut caller, ptr, len) else {
         return;
     };
+    if image_bytes.len() < 4 {
+        return;
+    }
+
+    // read image header
+    let transp = image_bytes[1] & 0x0f;
+    let bpp = image_bytes[1] & 0x30;
+    let width = u16::from_le_bytes(image_bytes[2..].try_into().unwrap()) as u32;
+    let image_bytes = &image_bytes[4..];
 
     let point = Point::new(x, y);
     let is_transp = transp != 0;
@@ -342,7 +336,7 @@ pub(crate) fn draw_image_inner(
         (1, true) => {
             let mut adapter = TransparencyAdapter {
                 target:      &mut state.frame,
-                transparent: Gray2::new(transp as u8 - 1),
+                transparent: Gray2::new(transp - 1),
             };
             draw_1bpp(image_bytes, width, point, sub, &mut adapter);
         }
@@ -354,7 +348,7 @@ pub(crate) fn draw_image_inner(
         (2, true) => {
             let mut adapter = TransparencyAdapter {
                 target:      &mut state.frame,
-                transparent: Gray2::new(transp as u8 - 1),
+                transparent: Gray2::new(transp - 1),
             };
             draw_2bpp(image_bytes, width, point, sub, &mut adapter);
         }
