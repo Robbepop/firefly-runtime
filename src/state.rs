@@ -16,6 +16,7 @@ pub(crate) struct State {
     pub app_id:    String<40>,
     pub frame:     Frame,
     pub palette:   [Rgb888; 4],
+    pub seed:      u32,
     pub memory:    Option<wasmi::Memory>,
 }
 
@@ -26,6 +27,7 @@ impl State {
             author_id: String::from_str(author_id).unwrap(),
             app_id: String::from_str(app_id).unwrap(),
             frame: Framebuffer::new(),
+            seed: 0,
             palette: [
                 // https://lospec.com/palette-list/kirokaze-gameboy
                 Rgb888::new(0x33, 0x2c, 0x50),

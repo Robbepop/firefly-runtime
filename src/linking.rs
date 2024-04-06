@@ -27,6 +27,8 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error
     linker.func_wrap("fs", "load_rom_file", fs::load_rom_file)?;
 
     linker.func_wrap("misc", "log_debug", misc::log_debug)?;
+    linker.func_wrap("misc", "set_seed", misc::set_seed)?;
+    linker.func_wrap("misc", "get_random", misc::get_random)?;
 
     Ok(())
 }

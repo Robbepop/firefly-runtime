@@ -3,6 +3,7 @@ use firefly_device::Device;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
+/// Write a debug log message into console.
 pub(crate) fn log_debug(mut caller: C, ptr: u32, len: u32) {
     let state = caller.data_mut();
     let Some(memory) = state.memory else {
@@ -23,4 +24,27 @@ pub(crate) fn log_debug(mut caller: C, ptr: u32, len: u32) {
         return;
     };
     state.device.log_debug("app", text);
+}
+
+/// Set random numbers generator seed.
+pub(crate) fn set_seed(mut caller: C, seed: u32) {
+    let state = caller.data_mut();
+    state.seed = seed;
+}
+
+/// Get a pseudo-random integer.
+///
+/// Uses [xorshift] algorithm. It's very fast, easy to implement,
+/// and has a very long period. Wikipedia claims that it fails some
+/// statistical tests, but that still should be good enough for games.
+///
+/// [xorshift]: https://en.wikipedia.org/wiki/Xorshift
+pub(crate) fn get_random(mut caller: C) -> u32 {
+    let state = caller.data_mut();
+    let mut x = state.seed;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    state.seed = x;
+    x
 }
