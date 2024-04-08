@@ -61,19 +61,19 @@ where
     }
 }
 
-// Do not write pixels of a certain color.
-pub(crate) struct TransparencyAdapter<'a, D>
+/// Replace colors.
+pub(crate) struct ColorReplaceAdapter<'a, D>
 where
     D: DrawTarget<Color = Gray2> + OriginDimensions,
 {
     pub target: &'a mut D,
 
-    /// The color to skip.
-    pub transparent: Gray2,
+    /// Replacement colors.
+    pub colors: [Option<Gray2>; 4],
 }
 
 /// Required by the DrawTarget trait.
-impl<'a, D> OriginDimensions for TransparencyAdapter<'a, D>
+impl<'a, D> OriginDimensions for ColorReplaceAdapter<'a, D>
 where
     D: DrawTarget<Color = Gray2> + OriginDimensions,
 {
@@ -82,7 +82,7 @@ where
     }
 }
 
-impl<'a, D> DrawTarget for TransparencyAdapter<'a, D>
+impl<'a, D> DrawTarget for ColorReplaceAdapter<'a, D>
 where
     D: DrawTarget<Color = Gray2> + OriginDimensions,
 {
@@ -93,7 +93,14 @@ where
     where
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
-        let iter = pixels.into_iter().filter(|p| p.1 != self.transparent);
+        let iter = pixels
+            .into_iter()
+            .filter_map(|Pixel(point, color)| -> Option<Pixel<Gray2>> {
+                let raw = color.into_storage();
+                debug_assert!(raw < 4);
+                let color = self.colors[raw as usize]?;
+                Some(Pixel(point, color))
+            });
         self.target.draw_iter(iter)
     }
 }

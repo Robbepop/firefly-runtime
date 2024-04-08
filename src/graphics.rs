@@ -1,4 +1,4 @@
-use crate::color::{BPPAdapter, TransparencyAdapter};
+use crate::color::{BPPAdapter, ColorReplaceAdapter};
 use crate::state::{State, HEIGHT, WIDTH};
 use core::convert::Infallible;
 use embedded_graphics::image::{Image, ImageRaw, ImageRawLE};
@@ -308,15 +308,31 @@ pub(crate) fn draw_sub_image(
     sub_y: i32,
     sub_width: u32,
     sub_height: u32,
+    c1: i32,
+    c2: i32,
+    c3: i32,
+    c4: i32,
 ) {
     let sub_point = Point::new(sub_x, sub_y);
     let sub_size = Size::new(sub_width, sub_height);
     let sub = Rectangle::new(sub_point, sub_size);
-    draw_image_inner(caller, ptr, len, x, y, Some(sub))
+    let colors = parse_4_colors(c1, c2, c3, c4);
+    draw_image_inner(caller, ptr, len, x, y, colors, Some(sub))
 }
 
-pub(crate) fn draw_image(caller: C, ptr: u32, len: u32, x: i32, y: i32) {
-    draw_image_inner(caller, ptr, len, x, y, None)
+pub(crate) fn draw_image(
+    caller: C,
+    ptr: u32,
+    len: u32,
+    x: i32,
+    y: i32,
+    c1: i32,
+    c2: i32,
+    c3: i32,
+    c4: i32,
+) {
+    let colors = parse_4_colors(c1, c2, c3, c4);
+    draw_image_inner(caller, ptr, len, x, y, colors, None)
 }
 
 pub(crate) fn draw_image_inner(
@@ -325,6 +341,7 @@ pub(crate) fn draw_image_inner(
     len: u32,
     x: i32,
     y: i32,
+    colors: [Option<Gray2>; 4],
     sub: Option<Rectangle>,
 ) {
     // retrieve the raw data from memory
@@ -336,42 +353,19 @@ pub(crate) fn draw_image_inner(
     }
 
     // read image header
-    let transp = image_bytes[1] & 0x0f;
-    let bpp = image_bytes[1] & 0x30;
-    let width = u16::from_le_bytes(image_bytes[2..].try_into().unwrap()) as u32;
+    let bpp = u8::from_le_bytes([image_bytes[1]]);
+    let width = u16::from_le_bytes([image_bytes[2], image_bytes[3]]) as u32;
     let image_bytes = &image_bytes[4..];
 
     let point = Point::new(x, y);
-    let is_transp = transp != 0;
-    match (bpp, is_transp) {
-        // 1BPP, transparent
-        (1, true) => {
-            let mut adapter = TransparencyAdapter {
-                target:      &mut state.frame,
-                transparent: Gray2::new(transp - 1),
-            };
-            draw_1bpp(image_bytes, width, point, sub, &mut adapter);
-        }
-        // 1BPP, no transparency
-        (1, false) => {
-            draw_1bpp(image_bytes, width, point, sub, &mut state.frame);
-        }
-        // 2BPP, transparent
-        (2, true) => {
-            let mut adapter = TransparencyAdapter {
-                target:      &mut state.frame,
-                transparent: Gray2::new(transp - 1),
-            };
-            draw_2bpp(image_bytes, width, point, sub, &mut adapter);
-        }
-        // 2BPP, no transparency
-        (2, false) => {
-            draw_2bpp(image_bytes, width, point, sub, &mut state.frame);
-        }
-        // unexpected BPP
-        (_, _) => {
-            // TODO: log "bad BPP" error message
-        }
+    let mut adapter = ColorReplaceAdapter {
+        target: &mut state.frame,
+        colors,
+    };
+    if bpp == 1 {
+        draw_1bpp(image_bytes, width, point, sub, &mut adapter);
+    } else {
+        draw_2bpp(image_bytes, width, point, sub, &mut adapter);
     }
 }
 
@@ -508,6 +502,23 @@ fn read_u8(bytes: &[u8], s: usize) -> u8 {
 /// Read little-endian u32 from the slice at the given index.
 fn read_u16(bytes: &[u8], s: usize) -> u16 {
     u16::from_le_bytes([bytes[s], bytes[s + 1]])
+}
+
+fn parse_4_colors(c1: i32, c2: i32, c3: i32, c4: i32) -> [Option<Gray2>; 4] {
+    [
+        parse_color(c1),
+        parse_color(c2),
+        parse_color(c3),
+        parse_color(c4),
+    ]
+}
+
+fn parse_color(c: i32) -> Option<Gray2> {
+    if c == 0 {
+        None
+    } else {
+        Some(Gray2::new(c as u8 - 1))
+    }
 }
 
 /// Statically ensure that the given Result cannot have an error.
