@@ -12,8 +12,8 @@ type Frame = Framebuffer<Gray2, RawU2, LittleEndian, WIDTH, HEIGHT, BUFFER_SIZE>
 
 pub(crate) struct State {
     pub device:    DeviceImpl,
-    pub author_id: String<40>,
-    pub app_id:    String<40>,
+    pub author_id: String<16>,
+    pub app_id:    String<16>,
     pub frame:     Frame,
     pub palette:   [Rgb888; 4],
     pub seed:      u32,
