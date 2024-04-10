@@ -50,7 +50,7 @@ where
         if let Err(err) = validate_id(app_id) {
             return Err(Error::InvalidAppID(err));
         }
-        let path = &["roms", author_id, app_id, "cart.wasm"];
+        let path = &["roms", author_id, app_id, "bin"];
         let Some(stream) = device.open_file(path) else {
             return Err(Error::FileNotFound);
         };
