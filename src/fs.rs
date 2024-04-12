@@ -5,6 +5,9 @@ use firefly_meta::validate_path_part;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
+/// Get file size in bytes for a file in the app ROM.
+///
+/// It is used by the apps to allocate the buffer for loading the file.
 pub(crate) fn get_rom_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
     let state = caller.data_mut();
     let Some(memory) = state.memory else {
@@ -19,8 +22,31 @@ pub(crate) fn get_rom_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> 
     state.device.get_file_size(path).unwrap_or(0)
 }
 
+/// Read contents of the file from the app ROM and write them into the buffer.
 pub(crate) fn load_rom_file(
+    caller: C,
+    path_ptr: u32,
+    path_len: u32,
+    buf_ptr: u32,
+    buf_len: u32,
+) -> u32 {
+    load_file_inner(caller, "roms", path_ptr, path_len, buf_ptr, buf_len)
+}
+
+/// Read contents of the file from the app data dir and write them into the buffer.
+pub(crate) fn load_file(
+    caller: C,
+    path_ptr: u32,
+    path_len: u32,
+    buf_ptr: u32,
+    buf_len: u32,
+) -> u32 {
+    load_file_inner(caller, "data", path_ptr, path_len, buf_ptr, buf_len)
+}
+
+pub(crate) fn load_file_inner(
     mut caller: C,
+    dir: &str,
     path_ptr: u32,
     path_len: u32,
     buf_ptr: u32,
@@ -36,7 +62,7 @@ pub(crate) fn load_rom_file(
         return 0;
     };
 
-    let path = &["roms", &state.author_id, &state.app_id, name];
+    let path = &[dir, &state.author_id, &state.app_id, name];
     let Some(mut file) = state.device.open_file(path) else {
         let msg = "cannot open file";
         state.device.log_error("fs", msg);
@@ -62,6 +88,7 @@ pub(crate) fn load_rom_file(
     file_size as u32
 }
 
+/// Load, parse, and validate the file name
 fn get_file_name<'a>(
     state: &State,
     data: &'a [u8],
