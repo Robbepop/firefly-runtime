@@ -28,8 +28,10 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error
     linker.func_wrap("fs", "get_file_size", fs::get_file_size)?;
     linker.func_wrap("fs", "load_file", fs::load_file)?;
     linker.func_wrap("fs", "dump_file", fs::dump_file)?;
+    linker.func_wrap("fs", "remove_file", fs::remove_file)?;
 
     linker.func_wrap("misc", "log_debug", misc::log_debug)?;
+    linker.func_wrap("misc", "log_error", misc::log_error)?;
     linker.func_wrap("misc", "set_seed", misc::set_seed)?;
     linker.func_wrap("misc", "get_random", misc::get_random)?;
 

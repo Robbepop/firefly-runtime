@@ -26,6 +26,29 @@ pub(crate) fn log_debug(mut caller: C, ptr: u32, len: u32) {
     state.device.log_debug("app", text);
 }
 
+/// Write a error log message into console.
+pub(crate) fn log_error(mut caller: C, ptr: u32, len: u32) {
+    let state = caller.data_mut();
+    let Some(memory) = state.memory else {
+        state.device.log_error("misc.log_error", "memory not found");
+        return;
+    };
+    let (data, state) = memory.data_and_store_mut(&mut caller);
+    let ptr = ptr as usize;
+    let len = len as usize;
+    let Some(bytes) = &data.get(ptr..(ptr + len)) else {
+        let msg = "text points outside of memory";
+        state.device.log_error("misc.log_error", msg);
+        return;
+    };
+    let Ok(text) = core::str::from_utf8(bytes) else {
+        let msg = "the given text is not valid UTF-8";
+        state.device.log_error("misc.log_error", msg);
+        return;
+    };
+    state.device.log_error("app", text);
+}
+
 /// Set random numbers generator seed.
 pub(crate) fn set_seed(mut caller: C, seed: u32) {
     let state = caller.data_mut();
