@@ -1,7 +1,6 @@
 use crate::color::FromRGB;
 use core::convert::Infallible;
 use core::marker::PhantomData;
-use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::image::GetPixel;
 use embedded_graphics::pixelcolor::{Gray2, Rgb888};
 use embedded_graphics::prelude::*;
@@ -17,9 +16,13 @@ const PPB: usize = 8 / BPP;
 const BUFFER_SIZE: usize = WIDTH * HEIGHT / PPB;
 
 pub(crate) struct FrameBuffer {
+    /// Tightly packed pixel data, 2 bits per pixel (4 pixels per byte).
     pub(crate) data:       [u8; BUFFER_SIZE],
+    /// The color palette. Maps 4-color packed pixels to 4 RGB colors.
     pub(crate) palette:    [Rgb888; 4],
+    /// The lowest (by value) Y value of all updated lines.
     pub(crate) dirty_from: usize,
+    /// The highest (by value) Y value of all updated lines.
     pub(crate) dirty_to:   usize,
 }
 
@@ -41,6 +44,7 @@ impl FrameBuffer {
     }
 }
 
+/// Required by the [DrawTarget] trait.
 impl OriginDimensions for FrameBuffer {
     fn size(&self) -> Size {
         Size::new(WIDTH as u32, HEIGHT as u32)
