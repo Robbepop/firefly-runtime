@@ -582,19 +582,25 @@ mod tests {
         func.call(&mut store, &inputs, &mut outputs).unwrap();
         assert_eq!(outputs.len(), 0);
 
-        let mut display = MockDisplay::<Gray2>::new();
+        let mut display = MockDisplay::<Rgb888>::new();
         display.set_allow_out_of_bounds_drawing(true);
-        let state = store.data();
+        let state = store.data_mut();
         let area = Rectangle::new(Point::zero(), Size::new(6, 5));
-        // let image = state.frame.as_image();
-        // let image = image.sub_image(&area);
-        // image.draw(&mut display).unwrap();
-        // display.assert_pattern(&[
-        //     "000000", // y=0
-        //     "002000", // y=1
-        //     "000200", // y=2
-        //     "000020", // y=3
-        //     "000000", // y=4
-        // ]);
+        use embedded_graphics::draw_target::DrawTargetExt;
+        let mut sub_display = display.clipped(&area);
+        state.frame.palette = [
+            Rgb888::new(255, 255, 255),
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(255, 0, 0),
+            Rgb888::new(0, 0, 0),
+        ];
+        state.frame.draw(&mut sub_display).unwrap();
+        display.assert_pattern(&[
+            "WWWWWW", // y=0
+            "WWRWWW", // y=1
+            "WWWRWW", // y=2
+            "WWWWRW", // y=3
+            "WWWWWW", // y=4
+        ]);
     }
 }
