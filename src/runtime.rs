@@ -138,7 +138,7 @@ where
 
     /// Draw the frame buffer on the actual screen.
     fn flush_frame(&mut self) {
-        let state = self.store.data();
+        let state = self.store.data_mut();
         // TODO: handle error
         _ = state.frame.draw(&mut self.display);
     }

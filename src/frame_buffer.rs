@@ -17,15 +17,20 @@ const PPB: usize = 8 / BPP;
 const BUFFER_SIZE: usize = WIDTH * HEIGHT / PPB;
 
 pub(crate) struct FrameBuffer {
-    pub(crate) data:    [u8; BUFFER_SIZE],
-    pub(crate) palette: [Rgb888; 4],
+    pub(crate) data:       [u8; BUFFER_SIZE],
+    pub(crate) palette:    [Rgb888; 4],
+    pub(crate) dirty_from: usize,
+    pub(crate) dirty_to:   usize,
 }
 
 impl FrameBuffer {
     pub(crate) fn new() -> Self {
         Self {
-            data:    [0; BUFFER_SIZE],
-            palette: [
+            data:       [0; BUFFER_SIZE],
+            // For the first frame, consider all lines dirty.
+            dirty_from: 0,
+            dirty_to:   HEIGHT,
+            palette:    [
                 // https://lospec.com/palette-list/kirokaze-gameboy
                 Rgb888::new(0x33, 0x2c, 0x50),
                 Rgb888::new(0x46, 0x87, 0x8f),
@@ -81,19 +86,41 @@ impl DrawTarget for FrameBuffer {
 
 impl FrameBuffer {
     /// Draw the framebuffer on an RGB screen.
-    pub(crate) fn draw<D, C, E>(&self, target: &mut D) -> Result<(), E>
+    pub(crate) fn draw<D, C, E>(&mut self, target: &mut D) -> Result<(), E>
     where
         C: RgbColor + FromRGB,
         D: DrawTarget<Color = C, Error = E>,
     {
+        // If no dirty lines, don't update the screen.
+        if self.dirty_from > self.dirty_to {
+            self.reset_dirty();
+            return Ok(());
+        }
         let colors = ColorIter {
             data:    &self.data,
             palette: &self.palette,
-            index:   0,
+            // start iteration from the first dirty line
+            index:   WIDTH * self.dirty_from,
+            // end iteration at the last dirty line
+            max_y:   self.dirty_to,
             color:   PhantomData,
         };
-        let area = Rectangle::new(Point::zero(), self.size());
-        target.fill_contiguous(&area, colors)
+        let area = Rectangle::new(
+            Point::new(0, self.dirty_from as i32),
+            Size::new(WIDTH as u32, self.dirty_to as u32),
+        );
+        let result = target.fill_contiguous(&area, colors);
+        // As soon as all lines are rendered on the screen,
+        // mark all lines a "clean" so that the next frame knows
+        // which lines are updated.
+        self.reset_dirty();
+        result
+    }
+
+    /// Mark all lines as clean ("non-dirty").
+    fn reset_dirty(&mut self) {
+        self.dirty_from = HEIGHT;
+        self.dirty_to = 0;
     }
 
     /// Set color of a single pixel at the given coordinates.
@@ -104,6 +131,8 @@ impl FrameBuffer {
         if y >= HEIGHT || x >= WIDTH {
             return; // the pixel is out of bounds
         }
+        self.dirty_from = self.dirty_from.min(y);
+        self.dirty_to = self.dirty_to.max(y);
         let pixel_index = y * WIDTH + x;
         let byte_index = pixel_index / PPB;
         let shift = (pixel_index as u8 & 0b11) << 1;
@@ -122,6 +151,7 @@ where
     data:    &'a [u8; BUFFER_SIZE],
     palette: &'a [Rgb888; 4],
     index:   usize,
+    max_y:   usize,
     color:   PhantomData<C>,
 }
 
@@ -132,6 +162,10 @@ where
     type Item = C;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let y = self.index / WIDTH;
+        if y > self.max_y {
+            return None;
+        }
         let byte_index = self.index / PPB;
         let byte = self.data.get(byte_index)?;
         let shift = self.index % PPB;
