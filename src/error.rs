@@ -2,6 +2,7 @@ use core::fmt::Display;
 
 pub enum Error {
     Wasmi(wasmi::Error),
+    FuncCall(&'static str, wasmi::Error),
     FileNotFound,
     InvalidAuthorID(firefly_meta::ValidationError),
     InvalidAppID(firefly_meta::ValidationError),
@@ -12,6 +13,7 @@ impl Display for Error {
         match self {
             Error::Wasmi(err) => write!(f, "wasm error: {err}"),
             Error::FileNotFound => write!(f, "file not found"),
+            Error::FuncCall(func, err) => write!(f, "error calling {func}: {err}"),
             Error::InvalidAuthorID(err) => write!(f, "invalid author ID: {err}"),
             Error::InvalidAppID(err) => write!(f, "invalid app ID: {err}"),
         }

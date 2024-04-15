@@ -22,6 +22,7 @@ where
     store: wasmi::Store<State>,
     update: Option<wasmi::TypedFunc<(), ()>>,
     render: Option<wasmi::TypedFunc<(), ()>>,
+    render_line: Option<wasmi::TypedFunc<(i32,), (i32,)>>,
 
     /// Time to render a single frame to match the expected FPS.
     per_frame: Delay,
@@ -67,6 +68,7 @@ where
             store,
             update: None,
             render: None,
+            render_line: None,
             per_frame: (1000 / FPS).millis(),
             prev_time: now,
         };
@@ -93,19 +95,26 @@ where
         let ins = self.instance;
         // The `_initialize` and `_start` functions are defined by wasip1.
         if let Ok(start) = ins.get_typed_func::<(), ()>(&self.store, "_initialize") {
-            start.call(&mut self.store, ())?;
+            if let Err(err) = start.call(&mut self.store, ()) {
+                return Err(Error::FuncCall("_initialize", err));
+            }
         }
         if let Ok(start) = ins.get_typed_func::<(), ()>(&self.store, "_start") {
-            start.call(&mut self.store, ())?;
+            if let Err(err) = start.call(&mut self.store, ()) {
+                return Err(Error::FuncCall("_start", err));
+            }
         }
         // The `boot` function is defined by our spec.
         if let Ok(start) = ins.get_typed_func::<(), ()>(&self.store, "boot") {
-            start.call(&mut self.store, ())?;
+            if let Err(err) = start.call(&mut self.store, ()) {
+                return Err(Error::FuncCall("boot", err));
+            }
         }
 
         // Other functions defined by our spec.
         self.update = ins.get_typed_func(&self.store, "update").ok();
         self.render = ins.get_typed_func(&self.store, "render").ok();
+        self.render_line = ins.get_typed_func(&self.store, "render_line").ok();
         Ok(())
     }
 
@@ -116,10 +125,14 @@ where
     pub fn update(&mut self) -> Result<(), Error> {
         if let Some(update) = self.update {
             // TODO: continue execution even if an update fails.
-            update.call(&mut self.store, ())?;
+            if let Err(err) = update.call(&mut self.store, ()) {
+                return Err(Error::FuncCall("update", err));
+            };
         }
         if let Some(render) = self.render {
-            render.call(&mut self.store, ())?;
+            if let Err(err) = render.call(&mut self.store, ()) {
+                return Err(Error::FuncCall("render", err));
+            };
         }
 
         // delay the screen flashing to adjust the frame rate
@@ -132,15 +145,20 @@ where
         }
         self.prev_time = state.device.now();
 
-        self.flush_frame();
-        Ok(())
+        self.flush_frame()
     }
 
     /// Draw the frame buffer on the actual screen.
-    fn flush_frame(&mut self) {
+    fn flush_frame(&mut self) -> Result<(), Error> {
+        if let Some(render_line) = self.render_line {
+            if let Err(err) = render_line.call(&mut self.store, (0,)) {
+                return Err(Error::FuncCall("render_line", err));
+            }
+        }
         let state = self.store.data_mut();
         // TODO: handle error
         _ = state.frame.draw(&mut self.display);
+        Ok(())
     }
 
     /// Find exported memory in the instance and add it into the state.
