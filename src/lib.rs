@@ -7,6 +7,7 @@ mod error;
 mod frame_buffer;
 mod fs;
 mod graphics;
+mod graphics_tests;
 mod input;
 mod linking;
 mod misc;
