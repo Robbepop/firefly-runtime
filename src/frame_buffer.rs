@@ -187,14 +187,22 @@ where
         let shift = self.index % PPB;
         let luma = (byte >> (shift * BPP)) & 0b11;
         debug_assert!(luma < 4);
-        let rgb888 = self.palette[luma as usize];
-        let r = rgb888.r() as u32 * C::MAX_R as u32 / Rgb888::MAX_R as u32;
-        let g = rgb888.g() as u32 * C::MAX_G as u32 / Rgb888::MAX_G as u32;
-        let b = rgb888.b() as u32 * C::MAX_B as u32 / Rgb888::MAX_B as u32;
-        debug_assert!(r < 256);
-        debug_assert!(g < 256);
-        debug_assert!(b < 256);
         self.index += 1;
-        Some(C::from_rgb(r as u8, g as u8, b as u8))
+        Some(convert_color(self.palette, luma))
     }
+}
+
+/// Convert 4-color gray luma into the target RGB color.
+fn convert_color<C>(palette: &[Rgb888; 4], luma: u8) -> C
+where
+    C: RgbColor + FromRGB,
+{
+    let rgb888 = palette[luma as usize];
+    let r = rgb888.r() as u32 * C::MAX_R as u32 / Rgb888::MAX_R as u32;
+    let g = rgb888.g() as u32 * C::MAX_G as u32 / Rgb888::MAX_G as u32;
+    let b = rgb888.b() as u32 * C::MAX_B as u32 / Rgb888::MAX_B as u32;
+    debug_assert!(r < 256);
+    debug_assert!(g < 256);
+    debug_assert!(b < 256);
+    C::from_rgb(r as u8, g as u8, b as u8)
 }
