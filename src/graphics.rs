@@ -541,7 +541,7 @@ mod tests {
     // const W: i32 = 1;
     const G: i32 = 2;
     const R: i32 = 3;
-    // const B: i32 = 4;
+    const B: i32 = 4;
 
     #[test]
     fn test_clear() {
@@ -617,6 +617,63 @@ mod tests {
                 "WGWWWW", // y=0
                 "WWGWWW", // y=1
                 "WWWGWW", // y=2
+            ],
+        );
+    }
+
+    #[test]
+    fn test_draw_rect() {
+        let mut store = make_store();
+        let func = wasmi::Func::wrap(&mut store, draw_rect);
+
+        // ensure that the frame buffer is empty
+        let state = store.data();
+        for byte in &state.frame.data {
+            assert_eq!(byte, &0b_0000_0000);
+        }
+
+        store.data_mut().frame.mark_clean();
+        let inputs = wrap_input(&[1, 2, 4, 3, G, B, 1]);
+        func.call(&mut store, &inputs, &mut []).unwrap();
+
+        let state = store.data_mut();
+        check_display(
+            &mut state.frame,
+            &[
+                "      ", // y=0
+                "      ", // y=1
+                "WBBBBW", // y=2
+                "WBGGBW", // y=3
+                "WBBBBW", // y=4
+            ],
+        );
+    }
+
+    #[test]
+    fn test_draw_rounded_rect() {
+        let mut store = make_store();
+        let func = wasmi::Func::wrap(&mut store, draw_rounded_rect);
+
+        // ensure that the frame buffer is empty
+        let state = store.data();
+        for byte in &state.frame.data {
+            assert_eq!(byte, &0b_0000_0000);
+        }
+
+        store.data_mut().frame.mark_clean();
+        let inputs = wrap_input(&[1, 2, 4, 4, 2, 2, G, B, 1]);
+        func.call(&mut store, &inputs, &mut []).unwrap();
+
+        let state = store.data_mut();
+        check_display(
+            &mut state.frame,
+            &[
+                "      ", // y=0
+                "      ", // y=1
+                "WWBBWW", // y=2
+                "WBGGBW", // y=3
+                "WBGGBW", // y=3
+                "WWBBWW", // y=4
             ],
         );
     }
