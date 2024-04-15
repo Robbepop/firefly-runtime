@@ -64,6 +64,28 @@ impl DrawTarget for FrameBuffer {
         }
         Ok(())
     }
+
+    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+        let mut new_byte = 0;
+        let luma = color.into_storage();
+        for _ in 0..PPB {
+            new_byte = (new_byte << BPP) | luma;
+        }
+        for y in 0..HEIGHT {
+            let line_start = WIDTH * y / PPB;
+            let line_end = line_start + y / PPB;
+            let line = &self.data[line_start..=line_end];
+            for old_byte in line {
+                if &new_byte != old_byte {
+                    self.dirty_from = self.dirty_from.min(y);
+                    self.dirty_to = self.dirty_to.max(y);
+                    break;
+                }
+            }
+        }
+        self.data.fill(new_byte);
+        Ok(())
+    }
 }
 
 impl FrameBuffer {
