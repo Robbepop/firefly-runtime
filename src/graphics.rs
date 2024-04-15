@@ -531,7 +531,7 @@ fn never_fails<T>(_: Result<T, Infallible>) {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::State;
+    use crate::{frame_buffer::FrameBuffer, state::State};
     use embedded_graphics::mock_display::MockDisplay;
     use firefly_device::*;
     use std::path::PathBuf;
@@ -539,11 +539,7 @@ mod tests {
 
     #[test]
     fn test_clear() {
-        let engine = wasmi::Engine::default();
-        let root = PathBuf::from("/tmp");
-        let device = DeviceImpl::new(root);
-        let state = State::new("au", "ap", device);
-        let mut store = <wasmi::Store<State>>::new(&engine, state);
+        let mut store = make_store();
         let func = wasmi::Func::wrap(&mut store, clear);
 
         // ensure that the frame buffer is empty
@@ -566,11 +562,7 @@ mod tests {
 
     #[test]
     fn test_draw_line() {
-        let engine = wasmi::Engine::default();
-        let root = PathBuf::from("/tmp");
-        let device = DeviceImpl::new(root);
-        let state = State::new("au", "ap", device);
-        let mut store = <wasmi::Store<State>>::new(&engine, state);
+        let mut store = make_store();
         let func = wasmi::Func::wrap(&mut store, draw_line);
 
         // ensure that the frame buffer is empty
@@ -579,31 +571,49 @@ mod tests {
             assert_eq!(byte, &0b_0000_0000);
         }
 
+        store.data_mut().frame.mark_clean();
+        let inputs = wrap_input(&[2, 1, 4, 3, 3, 1]);
+        func.call(&mut store, &inputs, &mut []).unwrap();
+
         let state = store.data_mut();
-        state.frame.mark_clean();
+        check_display(
+            &mut state.frame,
+            &[
+                "      ", // y=0
+                "WWRWWW", // y=1
+                "WWWRWW", // y=2
+                "WWWWRW", // y=3
+            ],
+        );
+    }
+
+    fn wrap_input(a: &[i32]) -> Vec<wasmi::Value> {
+        let mut res = Vec::new();
+        for el in a {
+            res.push(wasmi::Value::I32(*el))
+        }
+        res
+    }
+
+    fn check_display(frame: &mut FrameBuffer, pattern: &[&str]) {
         let mut display = MockDisplay::<Rgb888>::new();
-
-        let inputs = [I32(2), I32(1), I32(4), I32(3), I32(3), I32(1)];
-        let mut outputs = Vec::new();
-        func.call(&mut store, &inputs, &mut outputs).unwrap();
-        assert_eq!(outputs.len(), 0);
-
-        let state = store.data_mut();
         let area = Rectangle::new(Point::zero(), Size::new(6, 64));
-        use embedded_graphics::draw_target::DrawTargetExt;
         let mut sub_display = display.clipped(&area);
-        state.frame.palette = [
+        frame.palette = [
             Rgb888::new(255, 255, 255),
             Rgb888::new(0, 0, 0),
             Rgb888::new(255, 0, 0),
             Rgb888::new(0, 0, 0),
         ];
-        state.frame.draw(&mut sub_display).unwrap();
-        display.assert_pattern(&[
-            "      ", // y=0
-            "WWRWWW", // y=1
-            "WWWRWW", // y=2
-            "WWWWRW", // y=3
-        ]);
+        frame.draw(&mut sub_display).unwrap();
+        display.assert_pattern(pattern);
+    }
+
+    fn make_store() -> wasmi::Store<State> {
+        let engine = wasmi::Engine::default();
+        let root = PathBuf::from("/tmp");
+        let device = DeviceImpl::new(root);
+        let state = State::new("au", "ap", device);
+        wasmi::Store::new(&engine, state)
     }
 }

@@ -128,6 +128,9 @@ impl FrameBuffer {
     }
 
     /// Mark all lines as clean ("non-dirty").
+    ///
+    /// The next render won't redraw anything
+    /// unless something new is drawn on the buffer.
     pub(crate) fn mark_clean(&mut self) {
         self.dirty_from = HEIGHT;
         self.dirty_to = 0;
