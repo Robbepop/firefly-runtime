@@ -17,11 +17,11 @@ where
     D: DrawTarget<Color = C> + OriginDimensions,
     C: RgbColor + FromRGB,
 {
-    display:  D,
+    display: D,
     instance: wasmi::Instance,
-    store:    wasmi::Store<State>,
-    update:   Option<wasmi::TypedFunc<(), ()>>,
-    render:   Option<wasmi::TypedFunc<(), ()>>,
+    store: wasmi::Store<State>,
+    update: Option<wasmi::TypedFunc<(), ()>>,
+    render: Option<wasmi::TypedFunc<(), ()>>,
 
     /// Time to render a single frame to match the expected FPS.
     per_frame: Delay,

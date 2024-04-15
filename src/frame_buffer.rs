@@ -16,23 +16,23 @@ const BUFFER_SIZE: usize = WIDTH * HEIGHT / PPB;
 
 pub(crate) struct FrameBuffer {
     /// Tightly packed pixel data, 2 bits per pixel (4 pixels per byte).
-    pub(crate) data:       [u8; BUFFER_SIZE],
+    pub(crate) data: [u8; BUFFER_SIZE],
     /// The color palette. Maps 4-color packed pixels to 4 RGB colors.
-    pub(crate) palette:    [Rgb888; 4],
+    pub(crate) palette: [Rgb888; 4],
     /// The lowest (by value) Y value of all updated lines.
     pub(crate) dirty_from: usize,
     /// The highest (by value) Y value of all updated lines.
-    pub(crate) dirty_to:   usize,
+    pub(crate) dirty_to: usize,
 }
 
 impl FrameBuffer {
     pub(crate) fn new() -> Self {
         Self {
-            data:       [0; BUFFER_SIZE],
+            data: [0; BUFFER_SIZE],
             // For the first frame, consider all lines dirty.
             dirty_from: 0,
-            dirty_to:   HEIGHT,
-            palette:    [
+            dirty_to: HEIGHT,
+            palette: [
                 // https://lospec.com/palette-list/kirokaze-gameboy
                 Rgb888::new(0x33, 0x2c, 0x50),
                 Rgb888::new(0x46, 0x87, 0x8f),
@@ -79,13 +79,13 @@ impl FrameBuffer {
             return Ok(());
         }
         let colors = ColorIter {
-            data:    &self.data,
+            data: &self.data,
             palette: &self.palette,
             // start iteration from the first dirty line
-            index:   WIDTH * self.dirty_from,
+            index: WIDTH * self.dirty_from,
             // end iteration at the last dirty line
-            max_y:   self.dirty_to,
-            color:   PhantomData,
+            max_y: self.dirty_to,
+            color: PhantomData,
         };
         let area = Rectangle::new(
             Point::new(0, self.dirty_from as i32),
@@ -121,8 +121,6 @@ impl FrameBuffer {
         if y >= HEIGHT || x >= WIDTH {
             return; // the pixel is out of bounds
         }
-        self.dirty_from = self.dirty_from.min(y);
-        self.dirty_to = self.dirty_to.max(y);
         let pixel_index = y * WIDTH + x;
         let byte_index = pixel_index / PPB;
         let shift = (pixel_index as u8 & 0b11) << 1;
@@ -130,7 +128,13 @@ impl FrameBuffer {
         let byte = self.data[byte_index];
         let color = color.into_storage();
         debug_assert!(color < 4);
-        self.data[byte_index] = (color << shift) | (byte & mask);
+        let new_byte = (color << shift) | (byte & mask);
+        if new_byte == byte {
+            return;
+        }
+        self.dirty_from = self.dirty_from.min(y);
+        self.dirty_to = self.dirty_to.max(y);
+        self.data[byte_index] = new_byte
     }
 }
 
@@ -138,11 +142,11 @@ struct ColorIter<'a, C>
 where
     C: RgbColor + FromRGB,
 {
-    data:    &'a [u8; BUFFER_SIZE],
+    data: &'a [u8; BUFFER_SIZE],
     palette: &'a [Rgb888; 4],
-    index:   usize,
-    max_y:   usize,
-    color:   PhantomData<C>,
+    index: usize,
+    max_y: usize,
+    color: PhantomData<C>,
 }
 
 impl<'a, C> Iterator for ColorIter<'a, C>
