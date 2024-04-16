@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
+    use crate::frame_buffer::FrameBuffer;
     use crate::graphics::*;
-    use crate::{frame_buffer::FrameBuffer, state::State};
+    use crate::state::State;
     use embedded_graphics::draw_target::DrawTargetExt;
     use embedded_graphics::geometry::{Point, Size};
     use embedded_graphics::mock_display::MockDisplay;

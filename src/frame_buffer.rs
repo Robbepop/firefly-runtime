@@ -16,23 +16,23 @@ const BUFFER_SIZE: usize = WIDTH * HEIGHT / PPB;
 
 pub(crate) struct FrameBuffer {
     /// Tightly packed pixel data, 2 bits per pixel (4 pixels per byte).
-    pub(crate) data: [u8; BUFFER_SIZE],
+    pub(crate) data:    [u8; BUFFER_SIZE],
     /// The color palette. Maps 4-color packed pixels to 4 RGB colors.
     pub(crate) palette: [Rgb888; 4],
     /// The lowest (by value) Y value of all updated lines.
-    dirty_from: usize,
+    dirty_from:         usize,
     /// The highest (by value) Y value of all updated lines.
-    dirty_to: usize,
+    dirty_to:           usize,
 }
 
 impl FrameBuffer {
     pub(crate) fn new() -> Self {
         Self {
-            data: [0; BUFFER_SIZE],
+            data:       [0; BUFFER_SIZE],
             // For the first frame, consider all lines dirty.
             dirty_from: 0,
-            dirty_to: HEIGHT,
-            palette: [
+            dirty_to:   HEIGHT,
+            palette:    [
                 // https://lospec.com/palette-list/kirokaze-gameboy
                 Rgb888::new(0x33, 0x2c, 0x50),
                 Rgb888::new(0x46, 0x87, 0x8f),
@@ -126,8 +126,7 @@ impl FrameBuffer {
             Point::new(0, min_y as i32),
             Size::new(WIDTH as u32, max_y as u32),
         );
-        let result = target.fill_contiguous(&area, colors);
-        result
+        target.fill_contiguous(&area, colors)
     }
 
     /// Mark all lines as clean ("non-dirty").
@@ -176,11 +175,11 @@ struct ColorIter<'a, C>
 where
     C: RgbColor + FromRGB,
 {
-    data: &'a [u8; BUFFER_SIZE],
+    data:    &'a [u8; BUFFER_SIZE],
     palette: &'a [Rgb888; 4],
-    index: usize,
-    max_y: usize,
-    color: PhantomData<C>,
+    index:   usize,
+    max_y:   usize,
+    color:   PhantomData<C>,
 }
 
 impl<'a, C> Iterator for ColorIter<'a, C>
