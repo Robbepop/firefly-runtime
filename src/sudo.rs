@@ -1,4 +1,3 @@
-use crate::fs::get_file_name;
 use crate::state::State;
 use firefly_device::Device;
 use firefly_meta::validate_path_part;
@@ -16,14 +15,31 @@ const MAX_DEPTH: usize = 4;
 pub(crate) fn iter_dirs_buf_size(caller: C, path_ptr: u32, path_len: u32) -> u32 {
     let state = caller.data();
     let Some(memory) = state.memory else {
-        state.device.log_error("fs", "memory not found");
+        state.device.log_error("sudo", "memory not found");
         return 0;
     };
     let data = memory.data(&caller);
-    let Some(name) = get_file_name(state, data, path_ptr, path_len) else {
+    let path_ptr = path_ptr as usize;
+    let path_len = path_len as usize;
+    let Some(path_bytes) = data.get(path_ptr..(path_ptr + path_len)) else {
+        let msg = "file path points out of memory";
+        state.device.log_error("sudo", msg);
         return 0;
     };
-    let path: Vec<&str, MAX_DEPTH> = name.split('/').collect();
+    let Ok(path) = core::str::from_utf8(path_bytes) else {
+        let msg = "file path is not valid UTF-8";
+        state.device.log_error("sudo", msg);
+        return 0;
+    };
+    let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
+    for part in &path {
+        if validate_path_part(part).is_err() {
+            let msg = "file path is not allowed";
+            state.device.log_error("sudo", msg);
+            return 0;
+        }
+    }
+
     let mut size = 0;
     state.device.iter_dir(&path, |_kind, entry_name| {
         size += entry_name.len() + 1;
@@ -40,28 +56,28 @@ pub(crate) fn iter_dirs(
 ) -> u32 {
     let state = caller.data_mut();
     let Some(memory) = state.memory else {
-        state.device.log_error("fs", "memory not found");
+        state.device.log_error("sudo", "memory not found");
         return 0;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
     let Some((path_bytes, buf)) = get_safe_subsclices(data, path_ptr, path_len, buf_ptr, buf_len)
     else {
         let msg = "invalid pointer for path or buffer";
-        state.device.log_error("fs.iter_dirs", msg);
+        state.device.log_error("sudo.iter_dirs", msg);
         return 0;
     };
 
     // parse and validate the dir path.
     let Ok(path) = core::str::from_utf8(path_bytes) else {
         let msg = "file path is not valid UTF-8";
-        state.device.log_error("fs", msg);
+        state.device.log_error("sudo", msg);
         return 0;
     };
     let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
     for part in &path {
         if validate_path_part(part).is_err() {
             let msg = "file path is not allowed";
-            state.device.log_error("fs", msg);
+            state.device.log_error("sudo", msg);
             return 0;
         }
     }
