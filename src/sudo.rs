@@ -9,7 +9,7 @@ type C<'a> = wasmi::Caller<'a, State>;
 ///
 /// The current value is 4, assuming the flat and consistent structure:
 ///
-///     {data,roms,sys}/AUTHOR_ID/APP_ID/FILE_NAME
+/// `{data,roms,sys}/AUTHOR_ID/APP_ID/FILE_NAME`
 const MAX_DEPTH: usize = 4;
 
 pub(crate) fn iter_dirs_buf_size(caller: C, path_ptr: u32, path_len: u32) -> u32 {
