@@ -183,9 +183,8 @@ fn get_file_name<'a>(
         state.device.log_error("fs", msg);
         return None;
     };
-    if validate_path_part(name).is_err() {
-        let msg = "file name is not allowed";
-        state.device.log_error("fs", msg);
+    if let Err(err) = validate_path_part(name) {
+        state.log_validation_error("fs", "bad file name", err);
         return None;
     }
     Some(name)

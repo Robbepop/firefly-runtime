@@ -33,9 +33,8 @@ pub(crate) fn iter_dirs_buf_size(caller: C, path_ptr: u32, path_len: u32) -> u32
     };
     let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
     for part in &path {
-        if validate_path_part(part).is_err() {
-            let msg = "file path is not allowed";
-            state.device.log_error("sudo", msg);
+        if let Err(err) = validate_path_part(part) {
+            state.log_validation_error("sudo", "bad file path", err);
             return 0;
         }
     }
@@ -75,9 +74,8 @@ pub(crate) fn iter_dirs(
     };
     let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
     for part in &path {
-        if validate_path_part(part).is_err() {
-            let msg = "file path is not allowed";
-            state.device.log_error("sudo", msg);
+        if let Err(err) = validate_path_part(part) {
+            state.log_validation_error("sudo", "bad file path", err);
             return 0;
         }
     }
@@ -112,9 +110,8 @@ pub(crate) fn run_app(mut caller: C, author_ptr: u32, author_len: u32, app_ptr: 
         state.device.log_error("sudo.run_app", msg);
         return;
     };
-    if validate_id(author_id).is_err() {
-        let msg = "author_id is not allowed";
-        state.device.log_error("sudo.run_app", msg);
+    if let Err(err) = validate_id(author_id) {
+        state.log_validation_error("sudo.run_app", "bad author_id", err);
         return;
     }
 
@@ -130,9 +127,8 @@ pub(crate) fn run_app(mut caller: C, author_ptr: u32, author_len: u32, app_ptr: 
         state.device.log_error("sudo.run_app", msg);
         return;
     };
-    if validate_id(app_id).is_err() {
-        let msg = "app_id is not allowed";
-        state.device.log_error("sudo.run_app", msg);
+    if let Err(err) = validate_id(app_id) {
+        state.log_validation_error("sudo.run_app", "bad app_id", err);
         return;
     }
 

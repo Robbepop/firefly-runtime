@@ -1,6 +1,7 @@
 use crate::frame_buffer::FrameBuffer;
 use core::str::FromStr;
-use firefly_device::DeviceImpl;
+use firefly_device::{Device, DeviceImpl};
+use firefly_meta::ValidationError;
 use heapless::String;
 
 pub(crate) struct State {
@@ -22,5 +23,10 @@ impl State {
             seed: 0,
             memory: None,
         }
+    }
+
+    pub(crate) fn log_validation_error(&self, source: &str, msg: &str, err: ValidationError) {
+        self.device.log_error(source, msg);
+        self.device.log_error(source, err.as_str());
     }
 }
