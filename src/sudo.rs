@@ -1,4 +1,4 @@
-use crate::state::State;
+use crate::state::{State, Transition};
 use firefly_device::Device;
 use firefly_meta::{validate_id, validate_path_part};
 use heapless::Vec;
@@ -98,41 +98,38 @@ pub(crate) fn run_app(mut caller: C, author_ptr: u32, author_len: u32, app_ptr: 
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
 
-    let author_ptr = author_ptr as usize;
-    let author_len = author_len as usize;
-    let Some(author_bytes) = data.get(author_ptr..(author_ptr + author_len)) else {
-        let msg = "invalid pointer for author_id";
-        state.device.log_error("sudo.run_app", msg);
+    let Some(author_id) = get_id(author_ptr, author_len, data, state) else {
         return;
     };
-    let Ok(author_id) = core::str::from_utf8(author_bytes) else {
-        let msg = "author_id is not valid UTF-8";
-        state.device.log_error("sudo.run_app", msg);
+    let Some(app_id) = get_id(app_ptr, app_len, data, state) else {
         return;
     };
-    if let Err(err) = validate_id(author_id) {
-        state.log_validation_error("sudo.run_app", "bad author_id", err);
-        return;
-    }
+    // Should be safe to unwrap, assuming that we correctly
+    // validated the ID length earlier.
+    state.next = Transition::Replace(
+        author_id.try_into().unwrap(), //
+        app_id.try_into().unwrap(),    //
+    );
+}
 
-    let app_ptr = app_ptr as usize;
-    let app_len = app_len as usize;
-    let Some(app_bytes) = data.get(app_ptr..(app_ptr + app_len)) else {
-        let msg = "invalid pointer for app_id";
+fn get_id<'a>(ptr: u32, len: u32, data: &'a [u8], state: &mut State) -> Option<&'a str> {
+    let app_ptr = ptr as usize;
+    let app_len = len as usize;
+    let Some(id_bytes) = data.get(app_ptr..(app_ptr + app_len)) else {
+        let msg = "invalid pointer for ID";
         state.device.log_error("sudo.run_app", msg);
-        return;
+        return None;
     };
-    let Ok(app_id) = core::str::from_utf8(app_bytes) else {
-        let msg = "app_id is not valid UTF-8";
+    let Ok(id) = core::str::from_utf8(id_bytes) else {
+        let msg = "ID is not valid UTF-8";
         state.device.log_error("sudo.run_app", msg);
-        return;
+        return None;
     };
-    if let Err(err) = validate_id(app_id) {
-        state.log_validation_error("sudo.run_app", "bad app_id", err);
-        return;
+    if let Err(err) = validate_id(id) {
+        state.log_validation_error("sudo.run_app", "bad ID", err);
+        return None;
     }
-
-    todo!()
+    Some(id)
 }
 
 /// Get 2 subslices (one of which is mutable) from a slice.

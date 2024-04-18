@@ -4,6 +4,14 @@ use firefly_device::{Device, DeviceImpl};
 use firefly_meta::ValidationError;
 use heapless::String;
 
+pub enum Transition {
+    /// Continue execution of the current app.
+    Continue,
+    /// Replace the current app with a new one.
+    Replace(String<16>, String<16>),
+    // Exit,
+}
+
 pub(crate) struct State {
     pub device:    DeviceImpl,
     pub author_id: String<16>,
@@ -11,6 +19,7 @@ pub(crate) struct State {
     pub frame:     FrameBuffer,
     pub seed:      u32,
     pub memory:    Option<wasmi::Memory>,
+    pub next:      Transition,
 }
 
 impl State {
@@ -22,6 +31,7 @@ impl State {
             frame: FrameBuffer::new(),
             seed: 0,
             memory: None,
+            next: Transition::Continue,
         }
     }
 
