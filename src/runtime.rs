@@ -4,11 +4,15 @@ use crate::error::Error;
 use crate::frame_buffer::HEIGHT;
 use crate::linking::link;
 use crate::state::State;
+use crate::FullID;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::pixelcolor::RgbColor;
+use embedded_io::Read;
 use firefly_device::*;
+use firefly_meta::ShortMeta;
 use fugit::ExtU32;
+use heapless::Vec;
 
 /// Default frames per second.
 const FPS: u32 = 30;
@@ -42,7 +46,10 @@ where
         let engine = wasmi::Engine::default();
         let id = match config.id {
             Some(id) => id,
-            None => todo!(),
+            None => match detect_launcher(&config.device) {
+                Some(id) => id,
+                None => return Err(Error::NoLauncher),
+            },
         };
         id.validate()?;
         let path = &["roms", id.author(), id.app(), "bin"];
@@ -193,4 +200,23 @@ where
         let state = self.store.data_mut();
         state.memory = memory;
     }
+}
+
+fn detect_launcher(device: &DeviceImpl) -> Option<FullID> {
+    if let Some(id) = get_short_meta("launcher", device) {
+        return Some(id);
+    }
+    get_short_meta("new-app", device)
+}
+
+fn get_short_meta(fname: &str, device: &DeviceImpl) -> Option<FullID> {
+    let path = &["sys", fname];
+    let mut file = device.open_file(path)?;
+    let mut bytes = Vec::<u8, 64>::new();
+    file.read(&mut bytes).ok()?;
+    let meta = ShortMeta::decode(&bytes).ok()?;
+    let author = meta.author_id.try_into().ok()?;
+    let app = meta.app_id.try_into().ok()?;
+    let id = FullID::new(author, app);
+    Some(id)
 }
