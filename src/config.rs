@@ -13,7 +13,7 @@ where
     D: DrawTarget<Color = C> + OriginDimensions,
     C: RgbColor + FromRGB,
 {
-    pub id:      FullID,
+    pub id:      Option<FullID>,
     pub device:  DeviceImpl,
     pub display: D,
 }

@@ -40,14 +40,18 @@ where
     /// Create a new runtime with the wasm module loaded and instantiated.
     pub fn new(config: RuntimeConfig<D, C>) -> Result<Self, Error> {
         let engine = wasmi::Engine::default();
-        config.id.validate()?;
-        let path = &["roms", config.id.author(), config.id.app(), "bin"];
+        let id = match config.id {
+            Some(id) => id,
+            None => todo!(),
+        };
+        id.validate()?;
+        let path = &["roms", id.author(), id.app(), "bin"];
         let Some(stream) = config.device.open_file(path) else {
             return Err(Error::FileNotFound);
         };
         let module = wasmi::Module::new(&engine, stream)?;
         let now = config.device.now();
-        let state = State::new(config.id, config.device);
+        let state = State::new(id, config.device);
         let mut store = wasmi::Store::<State>::new(&engine, state);
         let mut linker = wasmi::Linker::<State>::new(&engine);
         link(&mut linker)?;
@@ -143,9 +147,13 @@ where
     }
 
     /// When runtime is created, it takes ownership of [Device]. This method releases it.
-    pub fn into_device(self) -> DeviceImpl {
+    pub fn into_config(self) -> RuntimeConfig<D, C> {
         let state = self.store.into_data();
-        state.device
+        RuntimeConfig {
+            id:      state.next,
+            device:  state.device,
+            display: self.display,
+        }
     }
 
     /// Draw the frame buffer on the actual screen.
