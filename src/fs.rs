@@ -26,7 +26,7 @@ pub fn get_file_size_inner(mut caller: C, dir: &str, path_ptr: u32, path_len: u3
     let Some(name) = get_file_name(state, data, path_ptr, path_len) else {
         return 0;
     };
-    let path = &[dir, &state.author_id, &state.app_id, name];
+    let path = &[dir, state.id.author(), state.id.app(), name];
     state.device.get_file_size(path).unwrap_or(0)
 }
 
@@ -70,7 +70,7 @@ pub fn load_file_inner(
         return 0;
     };
 
-    let path = &[dir, &state.author_id, &state.app_id, name];
+    let path = &[dir, state.id.author(), state.id.app(), name];
     let Some(mut file) = state.device.open_file(path) else {
         let msg = "cannot open file";
         state.device.log_error("fs", msg);
@@ -114,7 +114,7 @@ pub(crate) fn dump_file(
         return 0;
     };
 
-    let path = &["data", &state.author_id, &state.app_id, name];
+    let path = &["data", state.id.author(), state.id.app(), name];
     let Some(mut file) = state.device.create_file(path) else {
         let msg = "cannot create file";
         state.device.log_error("fs.dump_file", msg);
@@ -156,7 +156,7 @@ pub(crate) fn remove_file(mut caller: C, path_ptr: u32, path_len: u32) {
         return;
     };
 
-    let path = &["data", &state.author_id, &state.app_id, name];
+    let path = &["data", state.id.author(), state.id.app(), name];
     let ok = state.device.remove_file(path);
     if !ok {
         let msg = "cannot remove file";

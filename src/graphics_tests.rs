@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use crate::config::FullID;
     use crate::frame_buffer::FrameBuffer;
     use crate::graphics::*;
     use crate::state::State;
@@ -207,7 +208,11 @@ mod tests {
         let engine = wasmi::Engine::default();
         let root = PathBuf::from("/tmp");
         let device = DeviceImpl::new(root);
-        let state = State::new("au", "ap", device);
+        let id = FullID::new(
+            "test-author".try_into().unwrap(),
+            "test-app".try_into().unwrap(),
+        );
+        let state = State::new(id, device);
         wasmi::Store::new(&engine, state)
     }
 }

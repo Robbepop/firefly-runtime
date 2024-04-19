@@ -1,4 +1,5 @@
-use crate::state::{State, Transition};
+use crate::config::FullID;
+use crate::state::State;
 use firefly_device::Device;
 use firefly_meta::{validate_id, validate_path_part};
 use heapless::Vec;
@@ -106,10 +107,10 @@ pub(crate) fn run_app(mut caller: C, author_ptr: u32, author_len: u32, app_ptr: 
     };
     // Should be safe to unwrap, assuming that we correctly
     // validated the ID length earlier.
-    state.next = Transition::Replace(
+    state.next = Some(FullID::new(
         author_id.try_into().unwrap(), //
         app_id.try_into().unwrap(),    //
-    );
+    ));
 }
 
 fn get_id<'a>(ptr: u32, len: u32, data: &'a [u8], state: &mut State) -> Option<&'a str> {

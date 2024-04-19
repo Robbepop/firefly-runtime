@@ -3,7 +3,7 @@ use crate::config::RuntimeConfig;
 use crate::error::Error;
 use crate::frame_buffer::HEIGHT;
 use crate::linking::link;
-use crate::state::{State, Transition};
+use crate::state::State;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::pixelcolor::RgbColor;
@@ -47,7 +47,7 @@ where
         };
         let module = wasmi::Module::new(&engine, stream)?;
         let now = config.device.now();
-        let state = State::new(config.id.author(), config.id.app(), config.device);
+        let state = State::new(config.id, config.device);
         let mut store = wasmi::Store::<State>::new(&engine, state);
         let mut linker = wasmi::Linker::<State>::new(&engine);
         link(&mut linker)?;
@@ -113,7 +113,7 @@ where
     ///
     /// If there is not enough time passed since the last update,
     /// the update will be delayed to keep the expected frame rate.
-    pub fn update(&mut self) -> Result<&Transition, Error> {
+    pub fn update(&mut self) -> Result<bool, Error> {
         if let Some(update) = self.update {
             // TODO: continue execution even if an update fails.
             if let Err(err) = update.call(&mut self.store, ()) {
@@ -139,7 +139,7 @@ where
         self.flush_frame()?;
 
         let state = self.store.data();
-        Ok(&state.next)
+        Ok(state.exit)
     }
 
     /// When runtime is created, it takes ownership of [Device]. This method releases it.

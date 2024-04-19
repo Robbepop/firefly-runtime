@@ -1,37 +1,28 @@
+use crate::config::FullID;
 use crate::frame_buffer::FrameBuffer;
-use core::str::FromStr;
 use firefly_device::{Device, DeviceImpl};
 use firefly_meta::ValidationError;
-use heapless::String;
-
-pub enum Transition {
-    /// Continue execution of the current app.
-    Continue,
-    /// Replace the current app with a new one.
-    Replace(String<16>, String<16>),
-    // Exit,
-}
 
 pub(crate) struct State {
-    pub device:    DeviceImpl,
-    pub author_id: String<16>,
-    pub app_id:    String<16>,
-    pub frame:     FrameBuffer,
-    pub seed:      u32,
-    pub memory:    Option<wasmi::Memory>,
-    pub next:      Transition,
+    pub device: DeviceImpl,
+    pub id:     FullID,
+    pub frame:  FrameBuffer,
+    pub seed:   u32,
+    pub memory: Option<wasmi::Memory>,
+    pub exit:   bool,
+    pub next:   Option<FullID>,
 }
 
 impl State {
-    pub(crate) fn new(author_id: &str, app_id: &str, device: DeviceImpl) -> Self {
+    pub(crate) fn new(id: FullID, device: DeviceImpl) -> Self {
         Self {
             device,
-            author_id: String::from_str(author_id).unwrap(),
-            app_id: String::from_str(app_id).unwrap(),
+            id,
             frame: FrameBuffer::new(),
             seed: 0,
             memory: None,
-            next: Transition::Continue,
+            next: None,
+            exit: false,
         }
     }
 
