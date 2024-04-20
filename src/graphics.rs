@@ -18,7 +18,7 @@ pub(crate) fn get_screen_size(caller: C) -> u32 {
 }
 
 /// Set every pixel of the frame buffer to the given color.
-pub(crate) fn clear(mut caller: C, color: u32) {
+pub(crate) fn clear_screen(mut caller: C, color: u32) {
     if color == 0 {
         return;
     }

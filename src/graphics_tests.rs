@@ -19,9 +19,9 @@ mod tests {
     const B: i32 = 4;
 
     #[test]
-    fn test_clear() {
+    fn test_clear_screen() {
         let mut store = make_store();
-        let func = wasmi::Func::wrap(&mut store, clear);
+        let func = wasmi::Func::wrap(&mut store, clear_screen);
 
         // ensure that the frame buffer is empty
         let state = store.data();

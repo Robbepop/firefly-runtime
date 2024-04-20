@@ -3,7 +3,7 @@ use crate::{fs, graphics, input, misc, sudo};
 
 /// Register all host-defined functions in the linker.
 pub(crate) fn link(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error> {
-    linker.func_wrap("graphics", "clear", graphics::clear)?;
+    linker.func_wrap("graphics", "clear_screen", graphics::clear_screen)?;
     linker.func_wrap("graphics", "get_screen_size", graphics::get_screen_size)?;
     linker.func_wrap("graphics", "set_color", graphics::set_color)?;
     linker.func_wrap("graphics", "set_colors", graphics::set_colors)?;
