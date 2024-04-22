@@ -84,7 +84,8 @@ pub(crate) fn list_dirs(
     let mut pos = 0;
     state.device.iter_dir(&path, |_kind, entry_name| {
         buf[pos] = entry_name.len() as u8;
-        buf[(pos + 1)..].copy_from_slice(entry_name);
+        // TODO: It can panic! Don't trust that the buffer is long enough. Make it safe.
+        buf[(pos + 1)..(pos + 1 + entry_name.len())].copy_from_slice(entry_name);
         pos += entry_name.len() + 1;
     });
     pos as u32
