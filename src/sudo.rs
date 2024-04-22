@@ -115,6 +115,36 @@ pub(crate) fn run_app(mut caller: C, author_ptr: u32, author_len: u32, app_ptr: 
     ));
 }
 
+pub fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
+    let state = caller.data_mut();
+    let Some(memory) = state.memory else {
+        state.device.log_error("fs", "memory not found");
+        return 0;
+    };
+    let (data, state) = memory.data_and_store_mut(&mut caller);
+    let path_ptr = path_ptr as usize;
+    let path_len = path_len as usize;
+    let Some(path_bytes) = data.get(path_ptr..(path_ptr + path_len)) else {
+        state
+            .device
+            .log_error("fs", "fiel path points out of memory");
+        return 0;
+    };
+    // parse and validate the dir path.
+    let Ok(path) = core::str::from_utf8(path_bytes) else {
+        let msg = "file path is not valid UTF-8";
+        state.device.log_error("sudo", msg);
+        return 0;
+    };
+    let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
+    for part in &path {
+        if let Err(err) = validate_path_part(part) {
+            state.log_validation_error("sudo", "bad file path", err);
+            return 0;
+        }
+    }
+    state.device.get_file_size(&path).unwrap_or(0)
+}
 pub(crate) fn load_file(
     mut caller: C,
     path_ptr: u32,
