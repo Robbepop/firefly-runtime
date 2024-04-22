@@ -71,3 +71,8 @@ pub(crate) fn get_random(mut caller: C) -> u32 {
     state.seed = x;
     x
 }
+
+pub(crate) fn quit(mut caller: C) {
+    let state = caller.data_mut();
+    state.exit = true;
+}
