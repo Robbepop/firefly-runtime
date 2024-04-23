@@ -3,7 +3,7 @@ use firefly_device::*;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
-pub(crate) fn read_pad(caller: C) -> u32 {
+pub(crate) fn read_pad(caller: C, _player: u32) -> u32 {
     let state = caller.data();
     let input = match &state.input {
         Some(InputState { pad: Some(pad), .. }) => pad,
@@ -14,7 +14,7 @@ pub(crate) fn read_pad(caller: C) -> u32 {
     x << 16 | y
 }
 
-pub(crate) fn read_buttons(caller: C) -> u32 {
+pub(crate) fn read_buttons(caller: C, _player: u32) -> u32 {
     let state = caller.data();
     let Some(input) = &state.input else {
         return 0;

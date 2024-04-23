@@ -11,6 +11,7 @@ mod graphics_tests;
 mod input;
 mod linking;
 mod misc;
+mod net;
 mod runtime;
 mod state;
 mod sudo;

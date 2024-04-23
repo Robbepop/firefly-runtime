@@ -8,6 +8,7 @@ pub(crate) struct State {
     pub id:     FullID,
     pub frame:  FrameBuffer,
     pub seed:   u32,
+    pub online: bool,
     pub memory: Option<wasmi::Memory>,
     pub exit:   bool,
     pub next:   Option<FullID>,
@@ -24,6 +25,7 @@ impl State {
             memory: None,
             next: None,
             exit: false,
+            online: false,
             input: None,
         }
     }

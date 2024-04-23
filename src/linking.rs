@@ -1,5 +1,5 @@
 use crate::state::State;
-use crate::{fs, graphics, input, misc, sudo};
+use crate::{fs, graphics, input, misc, net, sudo};
 
 /// Register all host-defined functions in the linker.
 pub(crate) fn link(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error> {
@@ -29,6 +29,9 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error
     linker.func_wrap("fs", "load_file", fs::load_file)?;
     linker.func_wrap("fs", "dump_file", fs::dump_file)?;
     linker.func_wrap("fs", "remove_file", fs::remove_file)?;
+
+    linker.func_wrap("net", "is_online", net::is_online)?;
+    linker.func_wrap("net", "get_player_id", net::get_player_id)?;
 
     linker.func_wrap("misc", "log_debug", misc::log_debug)?;
     linker.func_wrap("misc", "log_error", misc::log_error)?;
