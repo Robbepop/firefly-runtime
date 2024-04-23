@@ -5,16 +5,10 @@ mod color;
 mod config;
 mod error;
 mod frame_buffer;
-mod fs;
-mod graphics;
-mod graphics_tests;
-mod input;
+mod host;
 mod linking;
-mod misc;
-mod net;
 mod runtime;
 mod state;
-mod sudo;
 
 pub use config::{FullID, RuntimeConfig};
 pub use error::Error;

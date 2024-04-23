@@ -1,5 +1,5 @@
+use crate::host::*;
 use crate::state::State;
-use crate::{fs, graphics, input, misc, net, sudo};
 
 /// Register all host-defined functions in the linker.
 pub(crate) fn link(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error> {

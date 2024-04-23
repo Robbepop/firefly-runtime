@@ -2,7 +2,7 @@
 mod tests {
     use crate::config::FullID;
     use crate::frame_buffer::FrameBuffer;
-    use crate::graphics::*;
+    use crate::host::graphics::*;
     use crate::state::State;
     use embedded_graphics::draw_target::DrawTargetExt;
     use embedded_graphics::geometry::{Point, Size};
