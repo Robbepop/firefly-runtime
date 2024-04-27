@@ -11,12 +11,6 @@ use firefly_device::Device;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
-pub(crate) fn get_screen_size(caller: C) -> u32 {
-    let state = caller.data();
-    let size = state.frame.size();
-    (size.width << 16) | size.height
-}
-
 /// Set every pixel of the frame buffer to the given color.
 pub(crate) fn clear_screen(mut caller: C, color: u32) {
     if color == 0 {
