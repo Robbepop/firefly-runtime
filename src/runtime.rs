@@ -164,6 +164,11 @@ where
         }
     }
 
+    pub fn device_mut(&mut self) -> &mut DeviceImpl {
+        let state = self.store.data_mut();
+        &mut state.device
+    }
+
     /// Draw the frame buffer on the actual screen.
     fn flush_frame(&mut self) -> Result<(), Error> {
         // self.display.clear(C::BLACK);
