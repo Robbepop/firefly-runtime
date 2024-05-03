@@ -188,10 +188,10 @@ mod tests {
         );
     }
 
-    fn wrap_input(a: &[i32]) -> Vec<wasmi::Value> {
+    fn wrap_input(a: &[i32]) -> Vec<wasmi::Val> {
         let mut res = Vec::new();
         for el in a {
-            res.push(wasmi::Value::I32(*el))
+            res.push(wasmi::Val::I32(*el))
         }
         res
     }

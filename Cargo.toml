@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-firefly-meta = "0.1.0"
+firefly-meta = "0.1.2"
 firefly-device = { path = "../firefly-device" }
 embedded-graphics = "0.8.1"
 embedded-graphics-transform = "0.1.0"
