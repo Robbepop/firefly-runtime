@@ -1,23 +1,23 @@
 use crate::color::FromRGB;
 use core::convert::Infallible;
 use core::marker::PhantomData;
-use embedded_graphics::pixelcolor::{Gray2, Rgb888};
+use embedded_graphics::pixelcolor::{Gray4, Rgb888};
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
 
 pub const WIDTH: usize = 240;
 pub const HEIGHT: usize = 160;
 /// Bits per pixel.
-const BPP: usize = 2;
+const BPP: usize = 4;
 /// Pixels per byte.
 const PPB: usize = 8 / BPP;
 /// Bytes needed to store all pixels.
 const BUFFER_SIZE: usize = WIDTH * HEIGHT / PPB;
 
 pub(crate) struct FrameBuffer {
-    /// Tightly packed pixel data, 2 bits per pixel (4 pixels per byte).
+    /// Tightly packed pixel data, 4 bits per pixel (2 pixels per byte).
     pub(crate) data:    [u8; BUFFER_SIZE],
-    /// The color palette. Maps 4-color packed pixels to 4 RGB colors.
+    /// The color palette. Maps 16-color packed pixels to RGB colors.
     pub(crate) palette: [Rgb888; 16],
 }
 
@@ -56,9 +56,9 @@ impl OriginDimensions for FrameBuffer {
     }
 }
 
-/// Allow drawing 4-color elements on the framebuffer.
+/// Allow drawing 16-color elements on the framebuffer.
 impl DrawTarget for FrameBuffer {
-    type Color = Gray2;
+    type Color = Gray4;
     type Error = Infallible;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -123,7 +123,7 @@ impl FrameBuffer {
     }
 
     /// Set color of a single pixel at the given coordinates.
-    fn set_pixel(&mut self, pixel: Pixel<Gray2>) {
+    fn set_pixel(&mut self, pixel: Pixel<Gray4>) {
         let Pixel(point, color) = pixel;
         let x = point.x as usize;
         let y = point.y as usize;
@@ -136,7 +136,7 @@ impl FrameBuffer {
         let mask = !(0b11 << shift);
         let byte = self.data[byte_index];
         let color = color.into_storage();
-        debug_assert!(color < 4);
+        debug_assert!(color < 16);
         let new_byte = (color << shift) | (byte & mask);
         if new_byte == byte {
             return;
@@ -170,8 +170,8 @@ where
         let byte_index = self.index / PPB;
         let byte = self.data.get(byte_index)?;
         let shift = self.index % PPB;
-        let luma = (byte >> (shift * BPP)) & 0b11;
-        debug_assert!(luma < 4);
+        let luma = (byte >> (shift * BPP)) & 0b1111;
+        debug_assert!(luma < 16);
         self.index += 1;
         Some(convert_color(self.palette, luma))
     }
@@ -192,8 +192,8 @@ where
     C::from_rgb(r as u8, g as u8, b as u8)
 }
 
-/// Duplicate the color 4 times and pack into 1 byte.
-fn color_to_byte(c: &Gray2) -> u8 {
+/// Duplicate the color and pack into 1 byte.
+fn color_to_byte(c: &Gray4) -> u8 {
     let mut new_byte = 0;
     let luma = c.into_storage();
     for _ in 0..PPB {

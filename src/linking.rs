@@ -5,7 +5,6 @@ use crate::state::State;
 pub(crate) fn link(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error> {
     linker.func_wrap("graphics", "clear_screen", graphics::clear_screen)?;
     linker.func_wrap("graphics", "set_color", graphics::set_color)?;
-    linker.func_wrap("graphics", "set_colors", graphics::set_colors)?;
     linker.func_wrap("graphics", "draw_point", graphics::draw_point)?;
     linker.func_wrap("graphics", "draw_line", graphics::draw_line)?;
     linker.func_wrap("graphics", "draw_rect", graphics::draw_rect)?;

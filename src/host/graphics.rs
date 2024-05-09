@@ -3,7 +3,7 @@ use crate::state::State;
 use core::convert::Infallible;
 use embedded_graphics::image::{Image, ImageRaw, ImageRawLE};
 use embedded_graphics::mono_font::{mapping, DecorationDimensions, MonoFont, MonoTextStyle};
-use embedded_graphics::pixelcolor::{BinaryColor, Gray2, Rgb888};
+use embedded_graphics::pixelcolor::{BinaryColor, Gray4, Rgb888};
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::*;
 use embedded_graphics::text::Text;
@@ -12,12 +12,17 @@ use firefly_device::Device;
 type C<'a> = wasmi::Caller<'a, State>;
 
 /// Set every pixel of the frame buffer to the given color.
-pub(crate) fn clear_screen(mut caller: C, color: u32) {
+pub(crate) fn clear_screen(mut caller: C, color: i32) {
     if color == 0 {
         return;
     }
     let state = caller.data_mut();
-    let color = Gray2::new(color as u8 - 1);
+    let Some(color) = parse_color(color) else {
+        state
+            .device
+            .log_error("graphics.clear_screen", "color is None");
+        return;
+    };
     never_fails(state.frame.clear(color));
 }
 
@@ -27,39 +32,21 @@ pub(crate) fn set_color(mut caller: C, index: u32, r: u32, g: u32, b: u32) {
     state.frame.palette[index as usize - 1] = Rgb888::new(r as u8, g as u8, b as u8);
 }
 
-/// Set all colors of the palette.
-pub(crate) fn set_colors(
-    mut caller: C,
-    c1_r: u32,
-    c1_g: u32,
-    c1_b: u32,
-    c2_r: u32,
-    c2_g: u32,
-    c2_b: u32,
-    c3_r: u32,
-    c3_g: u32,
-    c3_b: u32,
-    c4_r: u32,
-    c4_g: u32,
-    c4_b: u32,
-) {
-    let state = caller.data_mut();
-    state.frame.palette[0] = Rgb888::new(c1_r as u8, c1_g as u8, c1_b as u8);
-    state.frame.palette[1] = Rgb888::new(c2_r as u8, c2_g as u8, c2_b as u8);
-    state.frame.palette[2] = Rgb888::new(c3_r as u8, c3_g as u8, c3_b as u8);
-    state.frame.palette[3] = Rgb888::new(c4_r as u8, c4_g as u8, c4_b as u8);
-}
-
 /// Draw a single point.
 ///
 /// Without scailing, sets a single pixel.
-pub(crate) fn draw_point(mut caller: C, x: i32, y: i32, color: u32) {
+pub(crate) fn draw_point(mut caller: C, x: i32, y: i32, color: i32) {
     if color == 0 {
         return;
     }
     let state = caller.data_mut();
     let point = Point::new(x, y);
-    let color = Gray2::new(color as u8 - 1);
+    let Some(color) = parse_color(color) else {
+        state
+            .device
+            .log_error("graphics.draw_point", "point color is None");
+        return;
+    };
     let pixel = Pixel(point, color);
     never_fails(pixel.draw(&mut state.frame));
 }
@@ -71,14 +58,19 @@ pub(crate) fn draw_line(
     p1_y: i32,
     p2_x: i32,
     p2_y: i32,
-    color: u32,
+    color: i32,
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
     let start = Point::new(p1_x, p1_y);
     let end = Point::new(p2_x, p2_y);
     let line = Line::new(start, end);
-    let color = Gray2::new(color as u8 - 1);
+    let Some(color) = parse_color(color) else {
+        state
+            .device
+            .log_error("graphics.draw_line", "line color is None");
+        return;
+    };
     let style = PrimitiveStyle::with_stroke(color, stroke_width);
     never_fails(line.draw_styled(&style, &mut state.frame));
 }
@@ -282,7 +274,12 @@ pub(crate) fn draw_text(
             return;
         }
     };
-    let color = Gray2::new(color as u8 - 1);
+    let Some(color) = parse_color(color) else {
+        state
+            .device
+            .log_error("graphics.draw_text", "text color is None");
+        return;
+    };
     let style = MonoTextStyle::new(&font, color);
     let point = Point::new(x, y);
     let Ok(text) = core::str::from_utf8(text_bytes) else {
@@ -337,7 +334,7 @@ fn draw_image_inner(
     len: u32,
     x: i32,
     y: i32,
-    colors: [Option<Gray2>; 4],
+    colors: [Option<Gray4>; 4],
     sub: Option<Rectangle>,
 ) {
     // retrieve the raw data from memory
@@ -372,7 +369,7 @@ fn draw_1bpp<T>(
     sub: Option<Rectangle>,
     target: &mut T,
 ) where
-    T: DrawTarget<Color = Gray2, Error = Infallible> + OriginDimensions,
+    T: DrawTarget<Color = Gray4, Error = Infallible> + OriginDimensions,
 {
     let image_raw = ImageRawLE::<BinaryColor>::new(image_bytes, width);
     let mut adapter = BPPAdapter { target };
@@ -396,9 +393,9 @@ fn draw_2bpp<T>(
     sub: Option<Rectangle>,
     target: &mut T,
 ) where
-    T: DrawTarget<Color = Gray2, Error = Infallible> + OriginDimensions,
+    T: DrawTarget<Color = Gray4, Error = Infallible> + OriginDimensions,
 {
-    let image_raw = ImageRawLE::<Gray2>::new(image_bytes, width);
+    let image_raw = ImageRawLE::<Gray4>::new(image_bytes, width);
     match sub {
         Some(sub) => {
             let image_raw = image_raw.sub_image(&sub);
@@ -412,14 +409,14 @@ fn draw_2bpp<T>(
     }
 }
 
-fn get_shape_style(fill_color: u32, stroke_color: u32, stroke_width: u32) -> PrimitiveStyle<Gray2> {
+fn get_shape_style(fill_color: u32, stroke_color: u32, stroke_width: u32) -> PrimitiveStyle<Gray4> {
     let mut style = PrimitiveStyle::new();
     if fill_color != 0 {
-        let fill_color = Gray2::new(fill_color as u8 - 1);
+        let fill_color = Gray4::new(fill_color as u8 - 1);
         style.fill_color = Some(fill_color);
     }
     if stroke_color != 0 && stroke_width != 0 {
-        let stroke_color = Gray2::new(stroke_color as u8 - 1);
+        let stroke_color = Gray4::new(stroke_color as u8 - 1);
         style.stroke_color = Some(stroke_color);
         style.stroke_width = stroke_width;
     }
@@ -500,7 +497,7 @@ fn read_u16(bytes: &[u8], s: usize) -> u16 {
     u16::from_le_bytes([bytes[s], bytes[s + 1]])
 }
 
-fn parse_4_colors(c1: i32, c2: i32, c3: i32, c4: i32) -> [Option<Gray2>; 4] {
+fn parse_4_colors(c1: i32, c2: i32, c3: i32, c4: i32) -> [Option<Gray4>; 4] {
     [
         parse_color(c1),
         parse_color(c2),
@@ -509,11 +506,11 @@ fn parse_4_colors(c1: i32, c2: i32, c3: i32, c4: i32) -> [Option<Gray2>; 4] {
     ]
 }
 
-fn parse_color(c: i32) -> Option<Gray2> {
+fn parse_color(c: i32) -> Option<Gray4> {
     if c == 0 {
         None
     } else {
-        Some(Gray2::new(c as u8 - 1))
+        Some(Gray4::new(c as u8 - 1))
     }
 }
 
