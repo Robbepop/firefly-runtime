@@ -18,7 +18,7 @@ pub(crate) struct FrameBuffer {
     /// Tightly packed pixel data, 2 bits per pixel (4 pixels per byte).
     pub(crate) data:    [u8; BUFFER_SIZE],
     /// The color palette. Maps 4-color packed pixels to 4 RGB colors.
-    pub(crate) palette: [Rgb888; 4],
+    pub(crate) palette: [Rgb888; 16],
 }
 
 impl FrameBuffer {
@@ -26,11 +26,24 @@ impl FrameBuffer {
         Self {
             data:    [0; BUFFER_SIZE],
             palette: [
-                // https://lospec.com/palette-list/kirokaze-gameboy
-                Rgb888::new(0x33, 0x2c, 0x50),
-                Rgb888::new(0x46, 0x87, 0x8f),
-                Rgb888::new(0x94, 0xe3, 0x44),
-                Rgb888::new(0xe2, 0xf3, 0xe4),
+                // https://lospec.com/palette-list/sweetie-16
+                // https://github.com/nesbox/TIC-80/wiki/Palette
+                Rgb888::new(0x1a, 0x1c, 0x2c), // black
+                Rgb888::new(0x5d, 0x27, 0x5d), // purple
+                Rgb888::new(0xb1, 0x3e, 0x53), // red
+                Rgb888::new(0xef, 0x7d, 0x57), // orange
+                Rgb888::new(0xff, 0xcd, 0x75), // yellow
+                Rgb888::new(0xa7, 0xf0, 0x70), // light green
+                Rgb888::new(0x38, 0xb7, 0x64), // green
+                Rgb888::new(0x25, 0x71, 0x79), // dark green
+                Rgb888::new(0x29, 0x36, 0x6f), // dark blue
+                Rgb888::new(0x3b, 0x5d, 0xc9), // blue
+                Rgb888::new(0x41, 0xa6, 0xf6), // light blue
+                Rgb888::new(0x73, 0xef, 0xf7), // cyan
+                Rgb888::new(0xf4, 0xf4, 0xf4), // white
+                Rgb888::new(0x94, 0xb0, 0xc2), // light gray
+                Rgb888::new(0x56, 0x6c, 0x86), // gray
+                Rgb888::new(0x33, 0x3c, 0x57), // dark gray
             ],
         }
     }
@@ -137,7 +150,7 @@ where
     C: RgbColor + FromRGB,
 {
     data:    &'a [u8; BUFFER_SIZE],
-    palette: &'a [Rgb888; 4],
+    palette: &'a [Rgb888; 16],
     index:   usize,
     max_y:   usize,
     color:   PhantomData<C>,
@@ -164,8 +177,8 @@ where
     }
 }
 
-/// Convert 4-color gray luma into the target RGB color.
-fn convert_color<C>(palette: &[Rgb888; 4], luma: u8) -> C
+/// Convert 16-color gray luma into the target RGB color.
+fn convert_color<C>(palette: &[Rgb888; 16], luma: u8) -> C
 where
     C: RgbColor + FromRGB,
 {

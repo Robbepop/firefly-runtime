@@ -201,10 +201,26 @@ mod tests {
         let area = Rectangle::new(Point::zero(), Size::new(6, 7));
         let mut sub_display = display.clipped(&area);
         frame.palette = [
+            // 0-4
             Rgb888::new(255, 255, 255),
             Rgb888::new(0, 255, 0),
             Rgb888::new(255, 0, 0),
             Rgb888::new(0, 0, 255),
+            // 4-8
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
+            // 8-12
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
+            // 12-16
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
+            Rgb888::new(0, 0, 0),
         ];
         frame.draw(&mut sub_display).unwrap();
         display.assert_pattern(pattern);
