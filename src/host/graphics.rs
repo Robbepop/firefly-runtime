@@ -332,7 +332,7 @@ fn draw_image_inner(mut caller: C, ptr: u32, len: u32, x: i32, y: i32, sub: Opti
     // The color that should be omitted.
     // Used to encode transparency by sacrificing one color from the palette.
     let transp = u8::from_le_bytes([image_bytes[4]]);
-    let image_bytes = &image_bytes[4..];
+    let image_bytes = &image_bytes[5..];
     let swaps_len = match bpp {
         1 => 1,
         2 => 2,
