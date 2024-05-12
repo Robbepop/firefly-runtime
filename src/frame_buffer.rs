@@ -132,8 +132,8 @@ impl FrameBuffer {
         }
         let pixel_index = y * WIDTH + x;
         let byte_index = pixel_index / PPB;
-        let shift = (pixel_index as u8 & 0b11) << 1;
-        let mask = !(0b11 << shift);
+        let shift = if pixel_index % 2 == 0 { 0 } else { 4 };
+        let mask = !(0b1111 << shift);
         let byte = self.data[byte_index];
         let color = color.into_storage();
         debug_assert!(color < 16);

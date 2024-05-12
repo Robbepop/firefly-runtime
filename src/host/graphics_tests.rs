@@ -37,7 +37,7 @@ mod tests {
         // check that all pixel in the frame buffer are set to 1.
         let state = store.data();
         for byte in &state.frame.data {
-            assert_eq!(byte, &0b_0101_0101);
+            assert_eq!(byte, &0b_0001_0001);
         }
     }
 
