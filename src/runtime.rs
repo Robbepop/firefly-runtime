@@ -14,7 +14,7 @@ use firefly_meta::ShortMeta;
 use fugit::ExtU32;
 
 /// Default frames per second.
-const FPS: u32 = 30;
+const FPS: u32 = 60;
 
 pub struct Runtime<D, C>
 where

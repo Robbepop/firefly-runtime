@@ -65,6 +65,9 @@ pub(crate) fn set_seed(mut caller: C, seed: u32) {
 pub(crate) fn get_random(mut caller: C) -> u32 {
     let state = caller.data_mut();
     let mut x = state.seed;
+    if x == 0 {
+        x = 1;
+    }
     x ^= x << 13;
     x ^= x >> 17;
     x ^= x << 5;
