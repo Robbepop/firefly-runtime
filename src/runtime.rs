@@ -11,7 +11,6 @@ use embedded_graphics::pixelcolor::RgbColor;
 use embedded_io::Read;
 use firefly_device::*;
 use firefly_meta::ShortMeta;
-use fugit::ExtU32;
 
 /// Default frames per second.
 const FPS: u32 = 60;
@@ -29,10 +28,10 @@ where
     render_line: Option<wasmi::TypedFunc<(i32,), (i32,)>>,
 
     /// Time to render a single frame to match the expected FPS.
-    per_frame: Delay,
+    per_frame: Duration,
 
     /// The last time when the frame was updated.
-    prev_time: Time,
+    prev_time: Instant,
 }
 
 impl<D, C> Runtime<D, C>
@@ -70,7 +69,7 @@ where
             update: None,
             render: None,
             render_line: None,
-            per_frame: (1000 / FPS).millis(),
+            per_frame: Duration::from_fps(FPS),
             prev_time: now,
         };
         Ok(runtime)
