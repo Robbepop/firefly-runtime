@@ -84,14 +84,7 @@ impl Menu {
             return None;
         }
         self.handle_pad(input);
-        if !self.select_pressed && input.buttons[0] {
-            self.select_pressed = true;
-            self.active = false;
-            self.items.get(self.selected as usize)
-        } else {
-            self.select_pressed = false;
-            None
-        }
+        self.handle_select(input.buttons[0])
     }
 
     fn handle_menu_button(&mut self, pressed: bool) {
@@ -139,6 +132,19 @@ impl Menu {
             }
             self.down_pressed = true;
         }
+    }
+
+    fn handle_select(&mut self, pressed: bool) -> Option<&MenuItem> {
+        if self.select_pressed {
+            if !pressed {
+                self.select_pressed = false;
+                self.active = false;
+                return self.items.get(self.selected as usize);
+            }
+        } else {
+            self.select_pressed = pressed;
+        }
+        None
     }
 
     /// True if the menu should be currently shown.
