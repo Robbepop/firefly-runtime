@@ -42,10 +42,13 @@ pub(crate) struct Menu {
     rendered: bool,
 
     /// True if the menu button is currently pressed.
-    pressed: bool,
+    menu_pressed: bool,
 
     /// True if the menu button was released when the menu was open.
     was_released: bool,
+
+    down_pressed: bool,
+    up_pressed:   bool,
 }
 
 impl Menu {
@@ -59,8 +62,10 @@ impl Menu {
             selected: 0,
             active: false,
             rendered: false,
-            pressed: false,
+            menu_pressed: false,
             was_released: false,
+            down_pressed: false,
+            up_pressed: false,
         }
     }
 
@@ -71,6 +76,7 @@ impl Menu {
             None => &def,
         };
         self.handle_menu_button(input.buttons[4]);
+        self.handle_pad(input)
     }
 
     fn handle_menu_button(&mut self, pressed: bool) {
@@ -78,7 +84,7 @@ impl Menu {
         // that the button is always released when the app is running.
         if self.active {
             // When menu is open, close it on releasing the menu button.
-            if self.was_released && self.pressed && !pressed {
+            if self.was_released && self.menu_pressed && !pressed {
                 self.active = false;
             }
             if !pressed {
@@ -87,13 +93,37 @@ impl Menu {
         } else {
             // When menu is closed, open it on pressing the menu button.
             #[allow(clippy::collapsible_else_if)]
-            if !self.pressed && pressed {
+            if !self.menu_pressed && pressed {
                 self.active = true;
                 self.rendered = false;
                 self.was_released = false;
             }
         }
-        self.pressed = pressed;
+        self.menu_pressed = pressed;
+    }
+
+    fn handle_pad(&mut self, input: &InputState) {
+        let Some(pad) = &input.pad else {
+            self.down_pressed = false;
+            self.up_pressed = false;
+            return;
+        };
+        if pad.y < -50 {
+            self.down_pressed = false;
+            if !self.up_pressed && self.selected < 2 {
+                self.selected += 1;
+                self.rendered = false;
+            }
+            self.up_pressed = true;
+        }
+        if pad.y > 50 {
+            self.up_pressed = false;
+            if !self.down_pressed && self.selected > 0 {
+                self.selected -= 1;
+                self.rendered = false;
+            }
+            self.down_pressed = true;
+        }
     }
 
     /// True if the menu should be currently shown.
