@@ -3,7 +3,7 @@ use core::fmt;
 pub enum Error {
     Wasmi(wasmi::Error),
     FuncCall(&'static str, wasmi::Error),
-    FileNotFound,
+    FileNotFound(alloc::string::String),
     NoLauncher,
     InvalidAuthorID(firefly_meta::ValidationError),
     InvalidAppID(firefly_meta::ValidationError),
@@ -14,7 +14,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Wasmi(err) => write!(f, "wasm error: {err}"),
-            Error::FileNotFound => write!(f, "file not found"),
+            Error::FileNotFound(s) => write!(f, "file not found: {s}"),
             Error::NoLauncher => write!(f, "no launcher installed"),
             Error::FuncCall(func, err) => write!(f, "error calling {func}: {err}"),
             Error::InvalidAuthorID(err) => write!(f, "invalid author ID: {err}"),

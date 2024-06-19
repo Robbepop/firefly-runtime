@@ -55,10 +55,10 @@ where
         let stream = match config.device.open_file(path) {
             Some(stream) => stream,
             None => {
-                let path = &["roms", id.author(), id.app(), "bin"];
-                match config.device.open_file(path) {
+                let path_fallback = &["roms", id.author(), id.app(), "bin"];
+                match config.device.open_file(path_fallback) {
                     Some(stream) => stream,
-                    None => return Err(Error::FileNotFound),
+                    None => return Err(Error::FileNotFound(path.join("/"))),
                 }
             }
         };
