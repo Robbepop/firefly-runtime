@@ -27,12 +27,15 @@ where
     let mut compressor = libflate::zlib::Encoder::new(inner).unwrap();
     for line in data.chunks(WIDTH / 2) {
         compressor.write_all(&[0]).unwrap(); // filter type: no filter
-        compressor.write_all(&line).unwrap();
+        compressor.write_all(&swap_pairs(line)).unwrap();
     }
     let compressed = compressor.finish().into_result().unwrap();
-    debug_assert!(compressed.buf.len() > 0);
     write_chunk(&mut w, b"IDAT", &compressed.buf)?;
     Ok(())
+}
+
+fn swap_pairs(frame: &[u8]) -> alloc::vec::Vec<u8> {
+    frame.iter().map(|byte| byte.rotate_left(4)).collect()
 }
 
 fn encode_palette(palette: &[Rgb888; 16]) -> [u8; 16 * 3] {
