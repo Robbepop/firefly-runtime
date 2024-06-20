@@ -39,6 +39,7 @@ impl State {
         let action = self.menu.handle_input(&self.input);
         if let Some(action) = action {
             match action {
+                MenuItem::Custom(_, _) => todo!("custom items not implemented yet"),
                 MenuItem::Connect => todo!("network game is not implemented yet"),
                 MenuItem::ScreenShot => self.take_screenshot(),
                 MenuItem::Restart => {

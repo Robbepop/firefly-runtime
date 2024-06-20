@@ -14,6 +14,7 @@ use firefly_device::InputState;
 const LINE_HEIGHT: i32 = 12;
 
 pub(crate) enum MenuItem {
+    Custom(u8, alloc::string::String),
     Connect,
     ScreenShot,
     Restart,
@@ -23,6 +24,7 @@ pub(crate) enum MenuItem {
 impl MenuItem {
     fn as_str(&self) -> &str {
         match self {
+            MenuItem::Custom(_, t) => &t,
             MenuItem::Connect => "start multiplayer",
             MenuItem::ScreenShot => "take screenshot",
             MenuItem::Restart => "restart app",
@@ -32,8 +34,11 @@ impl MenuItem {
 }
 
 pub(crate) struct Menu {
+    /// Custom menu items.
+    app_items: alloc::vec::Vec<MenuItem>,
+
     /// System menu items.
-    items: heapless::Vec<MenuItem, 4>,
+    sys_items: heapless::Vec<MenuItem, 4>,
 
     selected: i32,
 
@@ -64,7 +69,8 @@ impl Menu {
         _ = items.push(MenuItem::Restart);
         _ = items.push(MenuItem::Quit);
         Self {
-            items,
+            app_items: alloc::vec::Vec::new(),
+            sys_items: items,
             selected: 0,
             active: false,
             rendered: false,
@@ -121,7 +127,8 @@ impl Menu {
         };
         if pad.y < -50 {
             self.down_pressed = false;
-            if !self.up_pressed && self.selected < self.items.len() as i32 - 1 {
+            let n_items = self.app_items.len() + self.sys_items.len();
+            if !self.up_pressed && self.selected < n_items as i32 - 1 {
                 self.selected += 1;
                 self.rendered = false;
             }
@@ -142,7 +149,12 @@ impl Menu {
             if !pressed {
                 self.select_pressed = false;
                 self.active = false;
-                return self.items.get(self.selected as usize);
+                let selected = self.selected as usize;
+                if let Some(item) = self.app_items.get(selected) {
+                    return Some(item);
+                }
+                let selected = selected - self.app_items.len();
+                return self.sys_items.get(selected);
             }
         } else {
             self.select_pressed = pressed;
@@ -174,7 +186,8 @@ impl Menu {
         let text_style = MonoTextStyle::new(&FONT_6X9, black);
 
         display.clear(white)?;
-        for (item, i) in self.items.iter().zip(0..) {
+        let items = self.app_items.iter().chain(self.sys_items.iter());
+        for (item, i) in items.zip(0..) {
             let point = Point::new(6, 9 + i * LINE_HEIGHT);
             let text = Text::new(item.as_str(), point, text_style);
             text.draw(display)?;
