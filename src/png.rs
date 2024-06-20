@@ -7,15 +7,12 @@ where
     W: embedded_io::Write<Error = E>,
 {
     w.write_all(&[137, 80, 78, 71, 13, 10, 26, 10])?;
-    // png::Encoder::write_header(self)
-
-    // Write IHDR chunk.
-    let mut data: [u8; 13] = [0; 13];
-    data[..4].copy_from_slice(&(WIDTH as u32).to_be_bytes());
-    data[4..8].copy_from_slice(&(HEIGHT as u32).to_be_bytes());
-    data[8] = 4; // bit depth: 4 BPP
-    data[9] = 3; // color type: indexed (uses palette)
-    write_chunk(&mut w, b"IHDR", &data)?;
+    let mut ihdr: [u8; 13] = [0; 13];
+    ihdr[..4].copy_from_slice(&(WIDTH as u32).to_be_bytes());
+    ihdr[4..8].copy_from_slice(&(HEIGHT as u32).to_be_bytes());
+    ihdr[8] = 4; // bit depth: 4 BPP
+    ihdr[9] = 3; // color type: indexed (uses palette)
+    write_chunk(&mut w, b"IHDR", &ihdr)?;
     write_chunk(&mut w, b"PLTE", &encode_palette(palette))?;
     write_frame(&mut w, frame)?;
     write_chunk(&mut w, b"IEND", &[])?;
@@ -27,17 +24,12 @@ fn write_frame<W, E>(mut w: W, data: &[u8]) -> Result<(), E>
 where
     W: embedded_io::Write<Error = E>,
 {
-    let in_len = WIDTH / 2;
-    let data_size = in_len * HEIGHT;
-    debug_assert_eq!(data_size, data.len());
-
     let inner = Buffer::new();
     let mut compressor = libflate::deflate::Encoder::new(inner);
-    for line in data.chunks(in_len) {
+    for line in data.chunks(WIDTH / 2) {
         compressor.write_all(&[0]).unwrap(); // filter type: no filter
         compressor.write_all(&line).unwrap();
     }
-
     let compressed = compressor.finish().into_result().unwrap();
     debug_assert!(compressed.buf.len() > 0);
     write_chunk(&mut w, b"IDAT", &compressed.buf)?;
