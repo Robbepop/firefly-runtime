@@ -39,7 +39,7 @@ impl State {
         let action = self.menu.handle_input(&self.input);
         if let Some(action) = action {
             match action {
-                MenuItem::Connect => todo!(),
+                MenuItem::Connect => todo!("network game is not implemented yet"),
                 MenuItem::Quit => self.exit = true,
                 MenuItem::ScreenShot => {
                     let file_name = alloc::format!("{}.{}.png", self.id.author(), self.id.app());

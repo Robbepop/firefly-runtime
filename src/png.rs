@@ -2,6 +2,7 @@ use crate::frame_buffer::{HEIGHT, WIDTH};
 use core2::io::Write;
 use embedded_graphics::pixelcolor::{Rgb888, RgbColor};
 
+/// Write the frame buffer as a PNG file.
 pub(crate) fn save_png<W, E>(mut w: W, palette: &[Rgb888; 16], frame: &[u8]) -> Result<(), E>
 where
     W: embedded_io::Write<Error = E>,
@@ -19,6 +20,7 @@ where
     Ok(())
 }
 
+/// Write the compressed PNG image data.
 fn write_frame<W, E>(mut w: W, data: &[u8]) -> Result<(), E>
 where
     W: embedded_io::Write<Error = E>,
@@ -34,10 +36,12 @@ where
     Ok(())
 }
 
+/// Each byte in the frame buffer contains 2 pixels. Swap these 2 pixels.
 fn swap_pairs(frame: &[u8]) -> alloc::vec::Vec<u8> {
     frame.iter().map(|byte| byte.rotate_left(4)).collect()
 }
 
+/// Serialize the palette as continius RGB bytes.
 fn encode_palette(palette: &[Rgb888; 16]) -> [u8; 16 * 3] {
     let mut encoded: [u8; 16 * 3] = [0; 16 * 3];
     for (i, color) in palette.iter().enumerate() {
@@ -49,6 +53,7 @@ fn encode_palette(palette: &[Rgb888; 16]) -> [u8; 16 * 3] {
     encoded
 }
 
+/// Write a PNG chunk.
 fn write_chunk<W, E>(mut w: W, name: &[u8; 4], data: &[u8]) -> Result<(), E>
 where
     W: embedded_io::Write<Error = E>,
@@ -63,6 +68,7 @@ where
     Ok(())
 }
 
+/// Adapter implementing core2 (used by libflate) writer for vector.
 struct Buffer {
     buf: alloc::vec::Vec<u8>,
 }
