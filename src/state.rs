@@ -41,16 +41,18 @@ impl State {
             match action {
                 MenuItem::Connect => todo!("network game is not implemented yet"),
                 MenuItem::Quit => self.exit = true,
-                MenuItem::ScreenShot => {
-                    let mut index = 1;
-                    self.device.iter_dir(&["sys", "shots"], |_, _| index += 1);
-                    let file_name =
-                        alloc::format!("{}.{}.{}.png", index, self.id.author(), self.id.app());
-                    let path = &["sys", "shots", &file_name];
-                    let mut file = self.device.create_file(path).unwrap();
-                    save_png(&mut file, &self.frame.palette, &*self.frame.data).unwrap();
-                }
+                MenuItem::ScreenShot => self.take_screenshot(),
             };
         };
+    }
+
+    /// Save the current frame buffer into a PNG file.
+    fn take_screenshot(&mut self) {
+        let mut index = 1;
+        self.device.iter_dir(&["sys", "shots"], |_, _| index += 1);
+        let file_name = alloc::format!("{}.{}.{}.png", index, self.id.author(), self.id.app());
+        let path = &["sys", "shots", &file_name];
+        let mut file = self.device.create_file(path).unwrap();
+        save_png(&mut file, &self.frame.palette, &*self.frame.data).unwrap();
     }
 }
