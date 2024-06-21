@@ -1,4 +1,5 @@
 use crate::state::State;
+use firefly_device::Device;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
@@ -10,11 +11,15 @@ pub(crate) fn args_sizes_get(_caller: C, _offset0: i32, _offset1: i32) -> i32 {
     0
 }
 
-pub(crate) fn environ_get(_caller: C, _environ: i32, _environ_buf: i32) -> i32 {
+pub(crate) fn environ_get(caller: C, _environ: i32, _environ_buf: i32) -> i32 {
+    let state = caller.data();
+    state.device.log_debug("wasip1.environ_get", "called");
     0
 }
 
-pub(crate) fn environ_sizes_get(_caller: C, _offset0: i32, _offset1: i32) -> i32 {
+pub(crate) fn environ_sizes_get(caller: C, _offset0: i32, _offset1: i32) -> i32 {
+    let state = caller.data();
+    state.device.log_debug("wasip1.environ_sizes_get", "called");
     0
 }
 
@@ -22,7 +27,9 @@ pub(crate) fn clock_res_get(_caller: C, _id: i32, _offset0: i32) -> i32 {
     0
 }
 
-pub(crate) fn clock_time_get(_caller: C, _id: i32, _precision: i64, _offset0: i32) -> i32 {
+pub(crate) fn clock_time_get(caller: C, _id: i32, _precision: i64, _offset0: i32) -> i32 {
+    let state = caller.data();
+    state.device.log_debug("wasip1.clock_time_get", "called");
     0
 }
 
@@ -34,7 +41,9 @@ pub(crate) fn fd_allocate(_caller: C, _fd: i32, _offset: i64, _len: i64) -> i32 
     0
 }
 
-pub(crate) fn fd_close(_caller: C, _fd: i32) -> i32 {
+pub(crate) fn fd_close(caller: C, _fd: i32) -> i32 {
+    let state = caller.data();
+    state.device.log_debug("wasip1.fd_close", "called");
     0
 }
 
@@ -107,13 +116,9 @@ pub(crate) fn fd_pwrite(
     0
 }
 
-pub(crate) fn fd_read(
-    _caller: C,
-    _fd: i32,
-    _iov_buf: i32,
-    _iov_buf_len: i32,
-    _offset1: i32,
-) -> i32 {
+pub(crate) fn fd_read(caller: C, _fd: i32, _iov_buf: i32, _iov_buf_len: i32, _offset1: i32) -> i32 {
+    let state = caller.data();
+    state.device.log_debug("wasip1.fd_read", "called");
     0
 }
 
@@ -132,7 +137,9 @@ pub(crate) fn fd_renumber(_caller: C, _fd: i32, _to: i32) -> i32 {
     0
 }
 
-pub(crate) fn fd_seek(_caller: C, _fd: i32, _offset: i64, _whence: i32, _offset0: i32) -> i32 {
+pub(crate) fn fd_seek(caller: C, _fd: i32, _offset: i64, _whence: i32, _offset0: i32) -> i32 {
+    let state = caller.data();
+    state.device.log_debug("wasip1.fd_seek", "called");
     0
 }
 
@@ -145,12 +152,14 @@ pub(crate) fn fd_tell(_caller: C, _fd: i32, _offset0: i32) -> i32 {
 }
 
 pub(crate) fn fd_write(
-    _caller: C,
+    caller: C,
     _fd: i32,
     _ciov_buf: i32,
     _ciov_buf_len: i32,
     _offset0: i32,
 ) -> i32 {
+    let state = caller.data();
+    state.device.log_debug("wasip1.fd_write", "called");
     0
 }
 
@@ -263,7 +272,11 @@ pub(crate) fn poll_oneoff(
     0
 }
 
-pub(crate) fn proc_exit(_caller: C, _rval: i32) {}
+pub(crate) fn proc_exit(mut caller: C, _rval: i32) {
+    let state = caller.data_mut();
+    state.device.log_debug("wasip1.proc_exit", "called");
+    state.exit = true;
+}
 
 pub(crate) fn proc_raise(_caller: C, _sig: i32) -> i32 {
     0
