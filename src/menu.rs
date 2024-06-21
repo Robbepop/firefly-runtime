@@ -185,6 +185,11 @@ impl Menu {
         self.active
     }
 
+    /// Open the menu (if closed).
+    pub fn activate(&mut self) {
+        self.active = true
+    }
+
     pub fn render<D, C, E>(&self, display: &mut D) -> Result<(), E>
     where
         D: DrawTarget<Color = C, Error = E> + OriginDimensions,

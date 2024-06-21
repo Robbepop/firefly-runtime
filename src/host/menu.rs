@@ -4,7 +4,7 @@ use firefly_device::Device;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
-pub(crate) fn add(mut caller: C, index: u32, name_ptr: u32, name_len: u32) {
+pub(crate) fn add_menu_item(mut caller: C, index: u32, name_ptr: u32, name_len: u32) {
     if index > 4 {
         return;
     }
@@ -31,10 +31,15 @@ pub(crate) fn add(mut caller: C, index: u32, name_ptr: u32, name_len: u32) {
     state.menu.add(index as u8, name.to_string())
 }
 
-pub(crate) fn remove(mut caller: C, index: u32) {
+pub(crate) fn remove_menu_item(mut caller: C, index: u32) {
     let state = caller.data_mut();
     if index > 4 {
         return;
     }
     state.menu.remove(index as u8);
+}
+
+pub(crate) fn open_menu(mut caller: C) {
+    let state = caller.data_mut();
+    state.menu.activate();
 }
