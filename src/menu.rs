@@ -24,7 +24,7 @@ pub(crate) enum MenuItem {
 impl MenuItem {
     fn as_str(&self) -> &str {
         match self {
-            MenuItem::Custom(_, t) => &t,
+            MenuItem::Custom(_, t) => t,
             MenuItem::Connect => "start multiplayer",
             MenuItem::ScreenShot => "take screenshot",
             MenuItem::Restart => "restart app",
@@ -58,7 +58,7 @@ pub(crate) struct Menu {
     was_released: bool,
 
     down_pressed: bool,
-    up_pressed: bool,
+    up_pressed:   bool,
 }
 
 impl Menu {
@@ -69,15 +69,15 @@ impl Menu {
         _ = items.push(MenuItem::Restart);
         _ = items.push(MenuItem::Quit);
         Self {
-            app_items: alloc::vec::Vec::new(),
-            sys_items: items,
-            selected: 0,
-            active: false,
-            rendered: false,
-            menu_pressed: false,
-            was_released: false,
-            down_pressed: false,
-            up_pressed: false,
+            app_items:      alloc::vec::Vec::new(),
+            sys_items:      items,
+            selected:       0,
+            active:         false,
+            rendered:       false,
+            menu_pressed:   false,
+            was_released:   false,
+            down_pressed:   false,
+            up_pressed:     false,
             select_pressed: false,
         }
     }
@@ -89,10 +89,8 @@ impl Menu {
 
     /// Remove a custom menu item.
     pub(crate) fn remove(&mut self, index: u8) {
-        self.app_items.retain(|item| match item {
-            MenuItem::Custom(i, _) if *i == index => false,
-            _ => true,
-        });
+        self.app_items
+            .retain(|item| !matches!(item, MenuItem::Custom(i, _) if *i == index));
     }
 
     pub fn handle_input(&mut self, input: &Option<InputState>) -> Option<&MenuItem> {

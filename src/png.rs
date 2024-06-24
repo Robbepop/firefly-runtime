@@ -46,7 +46,7 @@ fn encode_palette(palette: &[Rgb888; 16]) -> [u8; 16 * 3] {
     let mut encoded: [u8; 16 * 3] = [0; 16 * 3];
     for (i, color) in palette.iter().enumerate() {
         let i = i * 3;
-        encoded[i + 0] = color.r();
+        encoded[i] = color.r();
         encoded[i + 1] = color.g();
         encoded[i + 2] = color.b();
     }
