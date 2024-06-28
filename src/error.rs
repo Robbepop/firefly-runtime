@@ -2,7 +2,7 @@ use core::fmt;
 
 pub enum Error {
     Wasmi(wasmi::Error),
-    FuncCall(&'static str, wasmi::Error),
+    FuncCall(&'static str, wasmi::Error, Stats),
     FileNotFound(alloc::string::String),
     NoLauncher,
     InvalidAuthorID(firefly_meta::ValidationError),
@@ -16,7 +16,7 @@ impl fmt::Display for Error {
             Error::Wasmi(err) => write!(f, "wasm error: {err}"),
             Error::FileNotFound(s) => write!(f, "file not found: {s}"),
             Error::NoLauncher => write!(f, "no launcher installed"),
-            Error::FuncCall(func, err) => write!(f, "error calling {func}: {err}"),
+            Error::FuncCall(func, err, stats) => write!(f, "error calling {func}: {err}.\n{stats}"),
             Error::InvalidAuthorID(err) => write!(f, "invalid author ID: {err}"),
             Error::InvalidAppID(err) => write!(f, "invalid app ID: {err}"),
             Error::CannotDisplay => write!(f, "failed to draw on the display"),
@@ -27,6 +27,22 @@ impl fmt::Display for Error {
 impl From<wasmi::Error> for Error {
     fn from(value: wasmi::Error) -> Self {
         Self::Wasmi(value)
+    }
+}
+
+/// Runtime stats provided on guset failure that should help to debug the failure cause.
+pub struct Stats {
+    pub(crate) last_called: &'static str,
+}
+
+impl fmt::Display for Stats {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.last_called.is_empty() {
+            writeln!(f, "No host functions were called.")?;
+        } else {
+            writeln!(f, "The last called host function is {}.", self.last_called)?;
+        }
+        Ok(())
     }
 }
 

@@ -20,11 +20,11 @@ where
     D: DrawTarget<Color = C> + OriginDimensions,
     C: RgbColor + FromRGB,
 {
-    display: D,
-    instance: wasmi::Instance,
-    store: wasmi::Store<State>,
-    update: Option<wasmi::TypedFunc<(), ()>>,
-    render: Option<wasmi::TypedFunc<(), ()>>,
+    display:     D,
+    instance:    wasmi::Instance,
+    store:       wasmi::Store<State>,
+    update:      Option<wasmi::TypedFunc<(), ()>>,
+    render:      Option<wasmi::TypedFunc<(), ()>>,
     handle_menu: Option<wasmi::TypedFunc<(u32,), ()>>,
     render_line: Option<wasmi::TypedFunc<(i32,), (i32,)>>,
 
@@ -108,22 +108,13 @@ where
 
         let ins = self.instance;
         // The `_initialize` and `_start` functions are defined by wasip1.
-        if let Ok(start) = ins.get_typed_func::<(), ()>(&self.store, "_initialize") {
-            if let Err(err) = start.call(&mut self.store, ()) {
-                return Err(Error::FuncCall("_initialize", err));
-            }
-        }
-        if let Ok(start) = ins.get_typed_func::<(), ()>(&self.store, "_start") {
-            if let Err(err) = start.call(&mut self.store, ()) {
-                return Err(Error::FuncCall("_start", err));
-            }
-        }
+        let f = ins.get_typed_func::<(), ()>(&self.store, "_initialize");
+        self.call_callback("_initialize", f.ok())?;
+        let f = ins.get_typed_func::<(), ()>(&self.store, "_start");
+        self.call_callback("_start", f.ok())?;
         // The `boot` function is defined by our spec.
-        if let Ok(start) = ins.get_typed_func::<(), ()>(&self.store, "boot") {
-            if let Err(err) = start.call(&mut self.store, ()) {
-                return Err(Error::FuncCall("boot", err));
-            }
-        }
+        let f = ins.get_typed_func::<(), ()>(&self.store, "boot");
+        self.call_callback("boot", f.ok())?;
 
         // Other functions defined by our spec.
         self.update = ins.get_typed_func(&self.store, "update").ok();
@@ -155,22 +146,15 @@ where
         if let Some(custom_menu) = menu_index {
             if let Some(handle_menu) = self.handle_menu {
                 if let Err(err) = handle_menu.call(&mut self.store, (custom_menu as u32,)) {
-                    return Err(Error::FuncCall("handle_menu", err));
+                    let stats = self.store.data().stats();
+                    return Err(Error::FuncCall("handle_menu", err, stats));
                 };
             }
         }
 
-        if let Some(update) = self.update {
-            // TODO: continue execution even if an update fails.
-            if let Err(err) = update.call(&mut self.store, ()) {
-                return Err(Error::FuncCall("update", err));
-            };
-        }
-        if let Some(render) = self.render {
-            if let Err(err) = render.call(&mut self.store, ()) {
-                return Err(Error::FuncCall("render", err));
-            };
-        }
+        // TODO: continue execution even if an update fails.
+        self.call_callback("update", self.update)?;
+        self.call_callback("render", self.render)?;
 
         // delay the screen flashing to adjust the frame rate
         let state = self.store.data();
@@ -192,8 +176,8 @@ where
     pub fn into_config(self) -> RuntimeConfig<D, C> {
         let state = self.store.into_data();
         RuntimeConfig {
-            id: state.next,
-            device: state.device,
+            id:      state.next,
+            device:  state.device,
             display: self.display,
         }
     }
@@ -212,7 +196,8 @@ where
                 let (max_y,) = match render_line.call(&mut self.store, (min_y,)) {
                     Ok(max_y) => max_y,
                     Err(err) => {
-                        return Err(Error::FuncCall("render_line", err));
+                        let stats = self.store.data().stats();
+                        return Err(Error::FuncCall("render_line", err, stats));
                     }
                 };
                 let max_y: i32 = if max_y == 0 { 1000 } else { max_y };
@@ -241,6 +226,20 @@ where
         let memory = self.instance.get_memory(&self.store, "memory");
         let state = self.store.data_mut();
         state.memory = memory;
+    }
+
+    fn call_callback(
+        &mut self,
+        name: &'static str,
+        f: Option<wasmi::TypedFunc<(), ()>>,
+    ) -> Result<(), Error> {
+        if let Some(f) = f {
+            if let Err(err) = f.call(&mut self.store, ()) {
+                let stats = self.store.data().stats();
+                return Err(Error::FuncCall(name, err, stats));
+            }
+        }
+        Ok(())
     }
 }
 

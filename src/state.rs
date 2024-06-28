@@ -1,4 +1,5 @@
 use crate::config::FullID;
+use crate::error::Stats;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
 use crate::png::save_png;
@@ -54,6 +55,12 @@ impl State {
             online: false,
             input: None,
             called: "",
+        }
+    }
+
+    pub(crate) fn stats(&self) -> Stats {
+        Stats {
+            last_called: self.called,
         }
     }
 
