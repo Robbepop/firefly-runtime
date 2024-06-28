@@ -9,7 +9,8 @@ pub(crate) fn environ_get(_caller: C, _environ: i32, _environ_buf: i32) -> i32 {
 }
 
 pub(crate) fn environ_sizes_get(mut caller: C, offset0: i32, offset1: i32) -> i32 {
-    let state = caller.data();
+    let state = caller.data_mut();
+    state.called = "wasi_snapshot_preview1.environ_sizes_get";
     let Some(memory) = state.memory else {
         state.device.log_error("fs", HostError::MemoryNotFound);
         return 1;
@@ -28,7 +29,9 @@ pub(crate) fn environ_sizes_get(mut caller: C, offset0: i32, offset1: i32) -> i3
     0
 }
 
-pub(crate) fn clock_time_get(_caller: C, _id: i32, _precision: i64, _offset0: i32) -> i32 {
+pub(crate) fn clock_time_get(mut caller: C, _id: i32, _precision: i64, _offset0: i32) -> i32 {
+    let state = caller.data_mut();
+    state.called = "wasi_snapshot_preview1.clock_time_get";
     0
 }
 pub(crate) fn fd_close(_caller: C, _fd: i32) -> i32 {
@@ -55,6 +58,7 @@ pub(crate) fn fd_write(_fd: i32, _ciov_buf: i32, _ciov_buf_len: i32, _offset0: i
 
 pub(crate) fn proc_exit(mut caller: C, _rval: i32) {
     let state = caller.data_mut();
+    state.called = "wasi_snapshot_preview1.proc_exit";
     state.exit = true;
     // TODO: Apps expect that the guest code will stop execution after calling proc_exit.
     // Clang inserts "unreachable" right after that. Can we signal from here to wasmi

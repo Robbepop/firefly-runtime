@@ -8,20 +8,18 @@ use embedded_graphics::pixelcolor::{BinaryColor, Gray2, Gray4, Rgb888};
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::*;
 use embedded_graphics::text::Text;
-use firefly_device::Device;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
 /// Set every pixel of the frame buffer to the given color.
 pub(crate) fn clear_screen(mut caller: C, color: i32) {
+    let state = caller.data_mut();
+    state.called = "graphics.clear_screen";
     if color == 0 {
         return;
     }
-    let state = caller.data_mut();
     let Some(color) = parse_color(color) else {
-        state
-            .device
-            .log_error("graphics.clear_screen", HostError::NoneColor);
+        state.log_error(HostError::NoneColor);
         return;
     };
     never_fails(state.frame.clear(color));
@@ -30,6 +28,7 @@ pub(crate) fn clear_screen(mut caller: C, color: i32) {
 /// Set the given palette color.
 pub(crate) fn set_color(mut caller: C, index: u32, r: u32, g: u32, b: u32) {
     let state = caller.data_mut();
+    state.called = "graphics.set_color";
     state.frame.palette[index as usize - 1] = Rgb888::new(r as u8, g as u8, b as u8);
 }
 
@@ -37,15 +36,14 @@ pub(crate) fn set_color(mut caller: C, index: u32, r: u32, g: u32, b: u32) {
 ///
 /// Without scailing, sets a single pixel.
 pub(crate) fn draw_point(mut caller: C, x: i32, y: i32, color: i32) {
+    let state = caller.data_mut();
+    state.called = "graphics.draw_point";
     if color == 0 {
         return;
     }
-    let state = caller.data_mut();
     let point = Point::new(x, y);
     let Some(color) = parse_color(color) else {
-        state
-            .device
-            .log_error("graphics.draw_point", HostError::NoneColor);
+        state.log_error(HostError::NoneColor);
         return;
     };
     let pixel = Pixel(point, color);
@@ -63,13 +61,12 @@ pub(crate) fn draw_line(
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
+    state.called = "graphics.draw_line";
     let start = Point::new(p1_x, p1_y);
     let end = Point::new(p2_x, p2_y);
     let line = Line::new(start, end);
     let Some(color) = parse_color(color) else {
-        state
-            .device
-            .log_error("graphics.draw_line", HostError::NoneColor);
+        state.log_error(HostError::NoneColor);
         return;
     };
     let style = PrimitiveStyle::with_stroke(color, stroke_width);
@@ -88,6 +85,7 @@ pub(crate) fn draw_rect(
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
+    state.called = "graphics.draw_rect";
     let point = Point::new(x, y);
     let size = Size::new(width, height);
     let rect = Rectangle::new(point, size);
@@ -109,6 +107,7 @@ pub(crate) fn draw_rounded_rect(
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
+    state.called = "graphics.draw_rounded_rect";
     let point = Point::new(x, y);
     let size = Size::new(width, height);
     let rect = Rectangle::new(point, size);
@@ -129,6 +128,7 @@ pub(crate) fn draw_circle(
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
+    state.called = "graphics.draw_circle";
     let top_left = Point::new(x, y);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
     let circle = Circle::new(top_left, diameter);
@@ -147,6 +147,7 @@ pub(crate) fn draw_ellipse(
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
+    state.called = "graphics.draw_ellipse";
     let top_left = Point::new(x, y);
     let size = Size::new(width, height);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
@@ -168,6 +169,7 @@ pub(crate) fn draw_triangle(
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
+    state.called = "graphics.draw_triangle";
     let vertex1 = Point::new(p1_x, p1_y);
     let vertex2 = Point::new(p2_x, p2_y);
     let vertex3 = Point::new(p3_x, p3_y);
@@ -189,6 +191,7 @@ pub(crate) fn draw_arc(
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
+    state.called = "graphics.draw_arc";
     let point = Point::new(x, y);
     let angle_start = Angle::from_radians(angle_start.into());
     let angle_sweep = Angle::from_radians(angle_sweep.into());
@@ -210,6 +213,7 @@ pub(crate) fn draw_sector(
     stroke_width: u32,
 ) {
     let state = caller.data_mut();
+    state.called = "graphics.draw_sector";
     let point = Point::new(x, y);
     let angle_start = Angle::from_radians(angle_start.into());
     let angle_sweep = Angle::from_radians(angle_sweep.into());
@@ -229,11 +233,10 @@ pub(crate) fn draw_text(
     y: i32,
     color: i32,
 ) {
-    let state = caller.data();
+    let state = caller.data_mut();
+    state.called = "graphics.draw_text";
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("graphics.draw_text", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
@@ -246,50 +249,44 @@ pub(crate) fn draw_text(
     // The slices must not intersect and must be within memory.
     if text_ptr == font_ptr {
         let msg = "text and font point to the same slice";
-        state.device.log_error("graphics.draw_text", msg);
+        state.log_error(msg);
         return;
     }
     if text_ptr < font_ptr && text_ptr + text_len >= font_ptr {
         let msg = "text and font slices intersect";
-        state.device.log_error("graphics.draw_text", msg);
+        state.log_error(msg);
         return;
     }
     if font_ptr < text_ptr && font_ptr + font_len >= text_ptr {
         let msg = "text and font slices intersect";
-        state.device.log_error("graphics.draw_text", msg);
+        state.log_error(msg);
         return;
     }
 
     let Some(text_bytes) = &data.get(text_ptr..(text_ptr + text_len)) else {
-        state
-            .device
-            .log_error("graphics.draw_text", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return;
     };
     let Some(font_bytes) = &data.get(font_ptr..(font_ptr + font_len)) else {
-        state
-            .device
-            .log_error("graphics.draw_text", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return;
     };
     let font = match parse_font(font_bytes) {
         Ok(font) => font,
         Err(err) => {
-            state.device.log_error("graphics.draw_text", err);
+            state.log_error(err);
             return;
         }
     };
     let Some(color) = parse_color(color) else {
-        state
-            .device
-            .log_error("graphics.draw_text", HostError::NoneColor);
+        state.log_error(HostError::NoneColor);
         return;
     };
     let style = MonoTextStyle::new(&font, color);
     let point = Point::new(x, y);
     let Ok(text) = core::str::from_utf8(text_bytes) else {
         let msg = "the given text is not valid UTF-8";
-        state.device.log_error("graphics.draw_text", msg);
+        state.log_error(msg);
         return;
     };
     let text = Text::new(text, point, style);
@@ -297,7 +294,7 @@ pub(crate) fn draw_text(
 }
 
 pub(crate) fn draw_sub_image(
-    caller: C,
+    mut caller: C,
     ptr: u32,
     len: u32,
     x: i32,
@@ -307,13 +304,17 @@ pub(crate) fn draw_sub_image(
     sub_width: u32,
     sub_height: u32,
 ) {
+    let state = caller.data_mut();
+    state.called = "graphics.draw_sub_image";
     let sub_point = Point::new(sub_x, sub_y);
     let sub_size = Size::new(sub_width, sub_height);
     let sub = Rectangle::new(sub_point, sub_size);
     draw_image_inner(caller, ptr, len, x, y, Some(sub))
 }
 
-pub(crate) fn draw_image(caller: C, ptr: u32, len: u32, x: i32, y: i32) {
+pub(crate) fn draw_image(mut caller: C, ptr: u32, len: u32, x: i32, y: i32) {
+    let state = caller.data_mut();
+    state.called = "graphics.draw_image";
     draw_image_inner(caller, ptr, len, x, y, None)
 }
 
@@ -323,9 +324,7 @@ fn draw_image_inner(mut caller: C, ptr: u32, len: u32, x: i32, y: i32, sub: Opti
         return;
     };
     if image_bytes.len() < 7 {
-        state
-            .device
-            .log_error("graphics", "image file is too small");
+        state.log_error("image file is too small");
         return;
     }
 
@@ -365,7 +364,7 @@ fn draw_image_inner(mut caller: C, ptr: u32, len: u32, x: i32, y: i32, sub: Opti
             draw_bpp(image_raw, transp, swaps, point, sub, &mut state.frame)
         }
         _ => {
-            state.device.log_error("graphics", "invalid BPP");
+            state.log_error("invalid BPP");
         }
     };
 }
@@ -422,16 +421,14 @@ fn get_bytes<'b>(
 ) -> Option<(&'b mut State, &'b [u8])> {
     let state = caller.data();
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("graphics", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return None;
     };
     let (data, state) = memory.data_and_store_mut(caller);
     let ptr = ptr as usize;
     let len = len as usize;
     let Some(bytes) = &data.get(ptr..(ptr + len)) else {
-        state.device.log_error("graphics", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return None;
     };
     Some((state, bytes))

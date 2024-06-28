@@ -7,25 +7,20 @@ type C<'a> = wasmi::Caller<'a, State>;
 /// Write a debug log message into console.
 pub(crate) fn log_debug(mut caller: C, ptr: u32, len: u32) {
     let state = caller.data_mut();
+    state.called = "misc.log_debug";
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("misc.log_debug", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
     let ptr = ptr as usize;
     let len = len as usize;
     let Some(bytes) = &data.get(ptr..(ptr + len)) else {
-        state
-            .device
-            .log_error("misc.log_debug", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return;
     };
     let Ok(text) = core::str::from_utf8(bytes) else {
-        state
-            .device
-            .log_error("misc.log_debug", HostError::TextUtf8);
+        state.log_error(HostError::TextUtf8);
         return;
     };
     state.device.log_debug("app", text);
@@ -34,25 +29,20 @@ pub(crate) fn log_debug(mut caller: C, ptr: u32, len: u32) {
 /// Write a error log message into console.
 pub(crate) fn log_error(mut caller: C, ptr: u32, len: u32) {
     let state = caller.data_mut();
+    state.called = "misc.log_error";
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("misc.log_error", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
     let ptr = ptr as usize;
     let len = len as usize;
     let Some(bytes) = &data.get(ptr..(ptr + len)) else {
-        state
-            .device
-            .log_error("misc.log_error", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return;
     };
     let Ok(text) = core::str::from_utf8(bytes) else {
-        state
-            .device
-            .log_error("misc.log_error", HostError::TextUtf8);
+        state.log_error(HostError::TextUtf8);
         return;
     };
     state.device.log_error("app", text);
@@ -61,6 +51,7 @@ pub(crate) fn log_error(mut caller: C, ptr: u32, len: u32) {
 /// Set random numbers generator seed.
 pub(crate) fn set_seed(mut caller: C, seed: u32) {
     let state = caller.data_mut();
+    state.called = "misc.set_seed";
     state.seed = seed;
 }
 
@@ -73,6 +64,7 @@ pub(crate) fn set_seed(mut caller: C, seed: u32) {
 /// [xorshift]: https://en.wikipedia.org/wiki/Xorshift
 pub(crate) fn get_random(mut caller: C) -> u32 {
     let state = caller.data_mut();
+    state.called = "misc.get_random";
     let mut x = state.seed;
     if x == 0 {
         x = 1;
@@ -85,6 +77,8 @@ pub(crate) fn get_random(mut caller: C) -> u32 {
 }
 
 pub(crate) fn quit(mut caller: C) {
+    let state = caller.data_mut();
+    state.called = "misc.quit";
     let state = caller.data_mut();
     state.exit = true;
 }

@@ -9,18 +9,22 @@ type C<'a> = wasmi::Caller<'a, State>;
 /// Get file size in bytes for a file in the app ROM.
 ///
 /// It is used by the apps to allocate the buffer for loading the file.
-pub(crate) fn get_rom_file_size(caller: C, path_ptr: u32, path_len: u32) -> u32 {
+pub(crate) fn get_rom_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "fs.get_rom_file_size";
     get_file_size_inner(caller, true, path_ptr, path_len)
 }
 
-pub(crate) fn get_file_size(caller: C, path_ptr: u32, path_len: u32) -> u32 {
+pub(crate) fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "fs.get_file_size";
     get_file_size_inner(caller, false, path_ptr, path_len)
 }
 
 pub fn get_file_size_inner(mut caller: C, rom: bool, path_ptr: u32, path_len: u32) -> u32 {
     let state = caller.data_mut();
     let Some(memory) = state.memory else {
-        state.device.log_error("fs", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return 0;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
@@ -37,23 +41,27 @@ pub fn get_file_size_inner(mut caller: C, rom: bool, path_ptr: u32, path_len: u3
 
 /// Read contents of the file from the app ROM and write them into the buffer.
 pub(crate) fn load_rom_file(
-    caller: C,
+    mut caller: C,
     path_ptr: u32,
     path_len: u32,
     buf_ptr: u32,
     buf_len: u32,
 ) -> u32 {
+    let state = caller.data_mut();
+    state.called = "fs.load_rom_file";
     load_file_inner(caller, true, path_ptr, path_len, buf_ptr, buf_len)
 }
 
 /// Read contents of the file from the app data dir and write them into the buffer.
 pub(crate) fn load_file(
-    caller: C,
+    mut caller: C,
     path_ptr: u32,
     path_len: u32,
     buf_ptr: u32,
     buf_len: u32,
 ) -> u32 {
+    let state = caller.data_mut();
+    state.called = "fs.load_file";
     load_file_inner(caller, false, path_ptr, path_len, buf_ptr, buf_len)
 }
 
@@ -67,7 +75,7 @@ fn load_file_inner(
 ) -> u32 {
     let state = caller.data_mut();
     let Some(memory) = state.memory else {
-        state.device.log_error("fs", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return 0;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
@@ -81,21 +89,21 @@ fn load_file_inner(
         &["data", state.id.author(), state.id.app(), "etc", name]
     };
     let Some(mut file) = state.device.open_file(path) else {
-        state.device.log_error("fs", HostError::FileNotFound);
+        state.log_error(HostError::FileNotFound);
         return 0;
     };
     let buf_ptr = buf_ptr as usize;
     let buf_len = buf_len as usize;
     let Some(buf) = data.get_mut(buf_ptr..(buf_ptr + buf_len)) else {
-        state.device.log_error("fs", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return 0;
     };
     let Ok(file_size) = file.read(buf) else {
-        state.device.log_error("fs", HostError::FileRead);
+        state.log_error(HostError::FileRead);
         return 0;
     };
     if file_size != buf_len {
-        state.device.log_error("fs", HostError::BufferSize);
+        state.log_error(HostError::BufferSize);
         return 0;
     }
     file_size as u32
@@ -110,10 +118,9 @@ pub(crate) fn dump_file(
     buf_len: u32,
 ) -> u32 {
     let state = caller.data_mut();
+    state.called = "fs.dump_file";
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("fs.dump_file", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return 0;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
@@ -123,31 +130,25 @@ pub(crate) fn dump_file(
 
     let path = &["data", state.id.author(), state.id.app(), "etc", name];
     let Some(mut file) = state.device.create_file(path) else {
-        state
-            .device
-            .log_error("fs.dump_file", HostError::FileCreate);
+        state.log_error(HostError::FileCreate);
         return 0;
     };
     let buf_ptr = buf_ptr as usize;
     let buf_len = buf_len as usize;
     let Some(buf) = data.get_mut(buf_ptr..(buf_ptr + buf_len)) else {
-        state
-            .device
-            .log_error("fs.dump_file", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return 0;
     };
     let Ok(file_size) = file.write(buf) else {
-        state.device.log_error("fs.dump_file", HostError::FileRead);
+        state.log_error(HostError::FileRead);
         return 0;
     };
     if file.flush().is_err() {
-        state.device.log_error("fs.dump_file", HostError::FileFlush);
+        state.log_error(HostError::FileFlush);
         return 0;
     }
     if file_size != buf_len {
-        state
-            .device
-            .log_error("fs.dump_file", HostError::BufferSize);
+        state.log_error(HostError::BufferSize);
         return 0;
     }
     file_size as u32
@@ -155,8 +156,9 @@ pub(crate) fn dump_file(
 
 pub(crate) fn remove_file(mut caller: C, path_ptr: u32, path_len: u32) {
     let state = caller.data_mut();
+    state.called = "fs.remove_file";
     let Some(memory) = state.memory else {
-        state.device.log_error("fs", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
@@ -167,9 +169,7 @@ pub(crate) fn remove_file(mut caller: C, path_ptr: u32, path_len: u32) {
     let path = &["data", state.id.author(), state.id.app(), "etc", name];
     let ok = state.device.remove_file(path);
     if !ok {
-        state
-            .device
-            .log_error("fs.remove_file", HostError::FileRemove);
+        state.log_error(HostError::FileRemove);
     };
 }
 
@@ -183,15 +183,15 @@ fn get_file_name<'a>(
     let path_ptr = path_ptr as usize;
     let path_len = path_len as usize;
     let Some(name_bytes) = &data.get(path_ptr..(path_ptr + path_len)) else {
-        state.device.log_error("fs", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return None;
     };
     let Ok(name) = core::str::from_utf8(name_bytes) else {
-        state.device.log_error("fs", HostError::FileNameUtf8);
+        state.log_error(HostError::FileNameUtf8);
         return None;
     };
     if let Err(err) = validate_path_part(name) {
-        state.device.log_error("fs", HostError::FileName(err));
+        state.log_error(HostError::FileName(err));
         return None;
     }
     Some(name)

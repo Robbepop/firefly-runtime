@@ -2,19 +2,42 @@ use crate::config::FullID;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
 use crate::png::save_png;
+use core::fmt::Display;
 use firefly_device::*;
 
 pub(crate) struct State {
+    /// Access to peripherals.
     pub device: DeviceImpl,
-    pub menu:   Menu,
-    pub id:     FullID,
-    pub frame:  FrameBuffer,
-    pub seed:   u32,
+
+    /// The app menu manager.
+    pub menu: Menu,
+
+    /// The id of the currently running app.
+    pub id: FullID,
+
+    /// The frame buffer.
+    pub frame: FrameBuffer,
+
+    /// The current state of the randomization function.
+    pub seed: u32,
+
+    /// True if the netplay is active.
     pub online: bool,
+
+    /// Pointer to the app memory. Might be None if the app doesn't have memory.
     pub memory: Option<wasmi::Memory>,
-    pub exit:   bool,
-    pub next:   Option<FullID>,
-    pub input:  Option<InputState>,
+
+    /// True if the app should be stopped.
+    pub exit: bool,
+
+    /// The next app to run.
+    pub next: Option<FullID>,
+
+    /// The last read touch pad and buttons input.
+    pub input: Option<InputState>,
+
+    /// The last called host function.
+    pub called: &'static str,
 }
 
 impl State {
@@ -30,6 +53,7 @@ impl State {
             exit: false,
             online: false,
             input: None,
+            called: "",
         }
     }
 
@@ -61,5 +85,10 @@ impl State {
         let path = &["data", self.id.author(), self.id.app(), "shots", &file_name];
         let mut file = self.device.create_file(path).unwrap();
         save_png(&mut file, &self.frame.palette, &*self.frame.data).unwrap();
+    }
+
+    /// Log an error/warning occured in the currently executing host function.
+    pub(crate) fn log_error<D: Display>(&self, msg: D) {
+        self.device.log_error(self.called, msg);
     }
 }

@@ -15,35 +15,29 @@ type C<'a> = wasmi::Caller<'a, State>;
 /// `{data,roms,sys}/AUTHOR_ID/APP_ID/FILE_NAME`
 const MAX_DEPTH: usize = 4;
 
-pub(crate) fn list_dirs_buf_size(caller: C, path_ptr: u32, path_len: u32) -> u32 {
+pub(crate) fn list_dirs_buf_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "sudo.list_dirs_buf_size";
     let state = caller.data();
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("sudo.list_dirs_buf_size", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return 0;
     };
     let data = memory.data(&caller);
     let path_ptr = path_ptr as usize;
     let path_len = path_len as usize;
     let Some(path_bytes) = data.get(path_ptr..(path_ptr + path_len)) else {
-        state
-            .device
-            .log_error("sudo.list_dirs_buf_size", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return 0;
     };
     let Ok(path) = core::str::from_utf8(path_bytes) else {
-        state
-            .device
-            .log_error("sudo.list_dirs_buf_size", HostError::FileNameUtf8);
+        state.log_error(HostError::FileNameUtf8);
         return 0;
     };
     let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
     for part in &path {
         if let Err(err) = validate_path_part(part) {
-            state
-                .device
-                .log_error("sudo.list_dirs_buf_size", HostError::FileName(err));
+            state.log_error(HostError::FileName(err));
             return 0;
         }
     }
@@ -63,34 +57,27 @@ pub(crate) fn list_dirs(
     buf_len: u32,
 ) -> u32 {
     let state = caller.data_mut();
+    state.called = "sudo.list_dirs";
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("sudo.list_dirs", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return 0;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
     let Some((path_bytes, buf)) = get_safe_subsclices(data, path_ptr, path_len, buf_ptr, buf_len)
     else {
-        state
-            .device
-            .log_error("sudo.list_dirs", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return 0;
     };
 
     // parse and validate the dir path.
     let Ok(path) = core::str::from_utf8(path_bytes) else {
-        state
-            .device
-            .log_error("sudo.list_dirs", HostError::FileNameUtf8);
+        state.log_error(HostError::FileNameUtf8);
         return 0;
     };
     let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
     for part in &path {
         if let Err(err) = validate_path_part(part) {
-            state
-                .device
-                .log_error("sudo.list_dirs", HostError::FileName(err));
+            state.log_error(HostError::FileName(err));
             return 0;
         }
     }
@@ -108,10 +95,9 @@ pub(crate) fn list_dirs(
 /// Stop the current app and run the given one instead.
 pub(crate) fn run_app(mut caller: C, author_ptr: u32, author_len: u32, app_ptr: u32, app_len: u32) {
     let state = caller.data_mut();
+    state.called = "sudo.run_app";
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("sudo.run_app", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
@@ -133,34 +119,27 @@ pub(crate) fn run_app(mut caller: C, author_ptr: u32, author_len: u32, app_ptr: 
 
 pub fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
     let state = caller.data_mut();
+    state.called = "sudo.get_file_size";
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("sudo.get_file_size", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return 0;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
     let path_ptr = path_ptr as usize;
     let path_len = path_len as usize;
     let Some(path_bytes) = data.get(path_ptr..(path_ptr + path_len)) else {
-        state
-            .device
-            .log_error("sudo.get_file_size", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return 0;
     };
     // parse and validate the dir path.
     let Ok(path) = core::str::from_utf8(path_bytes) else {
-        state
-            .device
-            .log_error("sudo.get_file_size", HostError::FileNameUtf8);
+        state.log_error(HostError::FileNameUtf8);
         return 0;
     };
     let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
     for part in &path {
         if let Err(err) = validate_path_part(part) {
-            state
-                .device
-                .log_error("sudo.get_file_size", HostError::FileName(err));
+            state.log_error(HostError::FileName(err));
             return 0;
         }
     }
@@ -175,54 +154,41 @@ pub(crate) fn load_file(
     buf_len: u32,
 ) -> u32 {
     let state = caller.data_mut();
+    state.called = "sudo.load_file";
     let Some(memory) = state.memory else {
-        state
-            .device
-            .log_error("sudo.load_file", HostError::MemoryNotFound);
+        state.log_error(HostError::MemoryNotFound);
         return 0;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
     let Some((path_bytes, buf)) = get_safe_subsclices(data, path_ptr, path_len, buf_ptr, buf_len)
     else {
-        state
-            .device
-            .log_error("sudo.load_file", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return 0;
     };
 
     // parse and validate the dir path.
     let Ok(path) = core::str::from_utf8(path_bytes) else {
-        state
-            .device
-            .log_error("sudo.load_file", HostError::FileNameUtf8);
+        state.log_error(HostError::FileNameUtf8);
         return 0;
     };
     let path: Vec<&str, MAX_DEPTH> = path.split('/').collect();
     for part in &path {
         if let Err(err) = validate_path_part(part) {
-            state
-                .device
-                .log_error("sudo.load_file", HostError::FileName(err));
+            state.log_error(HostError::FileName(err));
             return 0;
         }
     }
 
     let Some(mut file) = state.device.open_file(&path) else {
-        state
-            .device
-            .log_error("sudo.load_file", HostError::FileNotFound);
+        state.log_error(HostError::FileNotFound);
         return 0;
     };
     let Ok(file_size) = file.read(buf) else {
-        state
-            .device
-            .log_error("sudo.load_file", HostError::FileRead);
+        state.log_error(HostError::FileRead);
         return 0;
     };
     if file_size != buf_len as usize {
-        state
-            .device
-            .log_error("sudo.load_file", HostError::BufferSize);
+        state.log_error(HostError::BufferSize);
         return 0;
     }
     file_size as u32
@@ -232,17 +198,15 @@ fn get_id<'a>(ptr: u32, len: u32, data: &'a [u8], state: &mut State) -> Option<&
     let app_ptr = ptr as usize;
     let app_len = len as usize;
     let Some(id_bytes) = data.get(app_ptr..(app_ptr + app_len)) else {
-        state
-            .device
-            .log_error("sudo.run_app", HostError::OomPointer);
+        state.log_error(HostError::OomPointer);
         return None;
     };
     let Ok(id) = core::str::from_utf8(id_bytes) else {
-        state.device.log_error("sudo.run_app", HostError::IdUtf8);
+        state.log_error(HostError::IdUtf8);
         return None;
     };
     if let Err(err) = validate_id(id) {
-        state.device.log_error("sudo.run_app", HostError::Id(err));
+        state.log_error(HostError::Id(err));
         return None;
     }
     Some(id)
