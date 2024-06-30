@@ -1,19 +1,19 @@
 use core::mem::MaybeUninit;
 
 const BUF_SIZE: usize = 5;
-const MAX_DRIFT: usize = BUF_SIZE / 2;
+const MAX_DRIFT: u32 = BUF_SIZE as u32 / 2;
 
 /// Circular buffer designed to keep a short history and a short look-ahead
 /// for netowrk device state updates. The goal is to be able to reply recent frames
 /// as well as not to loose frames received earlier than expected.
 #[derive(Debug)]
 pub(crate) struct RingBuf<T: Copy> {
-    frame: usize,
-    data:  [Option<(usize, T)>; BUF_SIZE],
+    frame: u32,
+    data:  [Option<(u32, T)>; BUF_SIZE],
 }
 
 impl<T: Copy> RingBuf<T> {
-    const INIT: Option<(usize, T)> = None;
+    const INIT: Option<(u32, T)> = None;
 
     pub fn new() -> Self {
         Self {
@@ -26,21 +26,21 @@ impl<T: Copy> RingBuf<T> {
         self.frame += 1
     }
 
-    pub fn insert(&mut self, frame: usize, val: T) {
+    pub fn insert(&mut self, frame: u32, val: T) {
         // Max drift ensures that too old or too ahead frame doesn't override
         // the frame that is closer to what we currently need.
         if self.frame.abs_diff(frame) > MAX_DRIFT {
             return;
         }
-        let index = frame % BUF_SIZE;
+        let index = frame as usize % BUF_SIZE;
         self.data[index] = Some((frame, val));
     }
 
-    pub fn get(&mut self, frame: usize) -> Option<T> {
+    pub fn get(&mut self, frame: u32) -> Option<T> {
         if self.frame.abs_diff(frame) > MAX_DRIFT {
             return None;
         }
-        let index = frame % BUF_SIZE;
+        let index = frame as usize % BUF_SIZE;
         let val = self.data.get(index)?;
         let (act_frame, val) = (*val)?;
         if act_frame != frame {
