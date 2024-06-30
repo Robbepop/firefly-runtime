@@ -13,6 +13,7 @@ mod host;
 mod linking;
 mod menu;
 mod png;
+mod ring;
 mod runtime;
 mod state;
 
