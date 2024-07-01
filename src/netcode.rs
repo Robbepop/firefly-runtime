@@ -65,8 +65,26 @@ impl Connector {
         if raw == b"HELLO" {
             return Ok(());
         }
-        // let msg = Message::deserialize(raw)?;
-        todo!()
+        let msg = match Message::deserialize(&raw) {
+            Ok(msg) => msg,
+            Err(_) => todo!(),
+        };
+        match msg {
+            Message::Req(req) => self.handle_req(addr, req),
+            Message::Resp(resp) => self.handle_resp(addr, resp),
+        }
+    }
+
+    fn handle_req(&mut self, addr: Addr, req: Req) -> Result<(), NetworkError> {
+        match req {
+            Req::Intro => self.greet_peer(addr),
+        }
+    }
+
+    fn handle_resp(&mut self, addr: Addr, resp: Resp) -> Result<(), NetworkError> {
+        match resp {
+            Resp::Intro(_) => todo!(),
+        }
     }
 
     fn greet_peer(&mut self, addr: Addr) -> Result<(), NetworkError> {

@@ -2,7 +2,7 @@ use alloc::string::{String, ToString};
 
 pub(crate) trait Serialize<S> {
     fn serialize<W: embedded_io::Write>(&self, w: W) -> Result<(), W::Error>;
-    fn deserialize<R: embedded_io::Read>(r: R) -> Result<S, R::Error>;
+    fn deserialize(r: &[u8]) -> Result<S, ()>;
 }
 
 pub(crate) enum Message {
@@ -24,12 +24,10 @@ impl Serialize<Message> for Message {
         }
     }
 
-    fn deserialize<R: embedded_io::Read>(mut r: R) -> Result<Message, R::Error> {
-        let mut buf = [0u8];
-        r.read(&mut buf)?;
-        match buf[0] {
-            1 => Ok(Self::Req(Req::deserialize(r)?)),
-            _ => Ok(Self::Resp(Resp::deserialize(r)?)),
+    fn deserialize(r: &[u8]) -> Result<Message, ()> {
+        match r[0] {
+            1 => Ok(Self::Req(Req::deserialize(&r[1..])?)),
+            _ => Ok(Self::Resp(Resp::deserialize(&r[1..])?)),
         }
     }
 }
@@ -47,7 +45,7 @@ impl Serialize<Req> for Req {
         Ok(())
     }
 
-    fn deserialize<R: embedded_io::Read>(r: R) -> Result<Req, R::Error> {
+    fn deserialize(r: &[u8]) -> Result<Req, ()> {
         Ok(Self::Intro)
     }
 }
@@ -66,7 +64,7 @@ impl Serialize<Resp> for Resp {
         }
     }
 
-    fn deserialize<R: embedded_io::Read>(r: R) -> Result<Resp, R::Error> {
+    fn deserialize(r: &[u8]) -> Result<Resp, ()> {
         Ok(Resp::Intro(Intro::deserialize(r)?))
     }
 }
@@ -81,19 +79,10 @@ impl Serialize<Intro> for Intro {
         w.write_all(self.name.as_bytes())
     }
 
-    fn deserialize<R: embedded_io::Read>(mut r: R) -> Result<Self, R::Error> {
-        let mut buf = [0u8; 16];
-        let res = r.read_exact(&mut buf[..2]);
-        if let Err(err) = res {
-            match err {
-                embedded_io::ReadExactError::UnexpectedEof => {}
-                embedded_io::ReadExactError::Other(err) => return Err(err),
-            }
-        }
-        let version = u16::from_le_bytes([buf[0], buf[1]]);
-        let size = r.read(&mut buf)?;
+    fn deserialize(r: &[u8]) -> Result<Self, ()> {
+        let version = u16::from_le_bytes([r[0], r[1]]);
         // UTF-8 validation will be handled later by "validate"
-        let name = unsafe { core::str::from_utf8_unchecked(&buf[..size]) };
+        let name = unsafe { core::str::from_utf8_unchecked(&r[2..]) };
         Ok(Self {
             name: name.to_string(),
             version,
