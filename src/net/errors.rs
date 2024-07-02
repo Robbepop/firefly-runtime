@@ -4,6 +4,8 @@ pub(crate) enum NetcodeError {
     Serialize(postcard::Error),
     Deserialize(postcard::Error),
     Network(firefly_device::NetworkError),
+    EmptyBufferIn,
+    EmptyBufferOut,
     PeerListFull,
 }
 
@@ -20,6 +22,8 @@ impl fmt::Display for NetcodeError {
             NetcodeError::Deserialize(err) => write!(f, "deserialization error: {err}"),
             NetcodeError::Network(err) => write!(f, "network error: {err}"),
             NetcodeError::PeerListFull => write!(f, "cannot connect more devices"),
+            NetcodeError::EmptyBufferIn => write!(f, "received empty message"),
+            NetcodeError::EmptyBufferOut => write!(f, "serializer produced empty message"),
         }
     }
 }

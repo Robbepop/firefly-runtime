@@ -3,6 +3,7 @@ use firefly_device::*;
 
 const ADVERTISE_EVERY: Duration = Duration::from_ms(100);
 const MAX_PEERS: usize = 7;
+const MSG_SIZE: usize = 64;
 type Addr = <NetworkImpl as Network>::Addr;
 
 pub(crate) struct MyInfo {
@@ -11,9 +12,9 @@ pub(crate) struct MyInfo {
 }
 
 pub(crate) struct PeerInfo {
-    addr:    Addr,
-    name:    heapless::String<16>,
-    version: u16,
+    pub addr:    Addr,
+    pub name:    heapless::String<16>,
+    pub version: u16,
 }
 
 pub(crate) struct Connector {
@@ -76,7 +77,7 @@ impl Connector {
         &mut self,
         device: &DeviceImpl,
         addr: Addr,
-        raw: heapless::Vec<u8, 64>,
+        raw: heapless::Vec<u8, MSG_SIZE>,
     ) -> Result<(), NetcodeError> {
         if !self.peer_addrs.contains(&addr) {
             device.log_debug("netcode", "new device discovered");
@@ -88,6 +89,9 @@ impl Connector {
         }
         if raw == b"HELLO" {
             return Ok(());
+        }
+        if raw.is_empty() {
+            return Err(NetcodeError::EmptyBufferIn);
         }
         let msg = match Message::decode(&raw) {
             Ok(msg) => msg,
@@ -145,17 +149,20 @@ impl Connector {
         Ok(())
     }
 
-    fn send_intro(&mut self, device: &DeviceImpl, addr: Addr) -> Result<(), NetcodeError> {
+    fn send_intro(&mut self, _device: &DeviceImpl, addr: Addr) -> Result<(), NetcodeError> {
         let intro = Intro {
             name:    self.me.name.clone(),
             version: self.me.version,
         };
         let msg = Message::Resp(intro.into());
-        let mut buf = [0u8, 64];
+        let mut buf = alloc::vec![0u8; MSG_SIZE];
         let raw = match msg.encode(&mut buf) {
             Ok(raw) => raw,
             Err(err) => return Err(NetcodeError::Serialize(err)),
         };
+        if raw.is_empty() {
+            return Err(NetcodeError::EmptyBufferOut);
+        }
         self.net.send(addr, raw)?;
         Ok(())
     }
