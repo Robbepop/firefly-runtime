@@ -1,4 +1,6 @@
 mod connector;
+mod errors;
 mod message;
-use connector::*;
-use message::*;
+pub(crate) use connector::*;
+pub(crate) use errors::*;
+pub(crate) use message::*;

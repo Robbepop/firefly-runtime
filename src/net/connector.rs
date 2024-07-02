@@ -1,21 +1,37 @@
-use super::message::*;
+use super::*;
 use firefly_device::*;
 
 const ADVERTISE_EVERY: Duration = Duration::from_ms(100);
+const MAX_PEERS: usize = 7;
 type Addr = <NetworkImpl as Network>::Addr;
 
+pub(crate) struct MyInfo {
+    name:    heapless::String<16>,
+    version: u16,
+}
+
+pub(crate) struct PeerInfo {
+    addr:    Addr,
+    name:    heapless::String<16>,
+    version: u16,
+}
+
 pub(crate) struct Connector {
+    me:                 MyInfo,
     net:                NetworkImpl,
     last_advertisement: Option<Instant>,
-    peers:              heapless::Vec<Addr, 4>,
+    peer_addrs:         heapless::Vec<Addr, MAX_PEERS>,
+    peer_infos:         heapless::Vec<PeerInfo, MAX_PEERS>,
 }
 
 impl Connector {
-    pub fn new(net: NetworkImpl) -> Self {
+    pub fn new(me: MyInfo, net: NetworkImpl) -> Self {
         Self {
+            me,
             net,
             last_advertisement: None,
-            peers: heapless::Vec::new(),
+            peer_addrs: heapless::Vec::new(),
+            peer_infos: heapless::Vec::new(),
         }
     }
 
@@ -26,20 +42,20 @@ impl Connector {
         }
     }
 
-    pub fn finalize(self) {
-        todo!()
-    }
+    // pub fn finalize(self) {
+    //     todo!()
+    // }
 
-    fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetworkError> {
+    fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
         let now = device.now();
         self.advertise(now)?;
         if let Some((addr, msg)) = self.net.recv()? {
-            self.handle_message(addr, msg)?;
+            self.handle_message(device, addr, msg)?;
         }
         Ok(())
     }
 
-    fn advertise(&mut self, now: Instant) -> Result<(), NetworkError> {
+    fn advertise(&mut self, now: Instant) -> Result<(), NetcodeError> {
         if let Some(prev) = self.last_advertisement {
             if now - prev < ADVERTISE_EVERY {
                 return Ok(());
@@ -52,42 +68,83 @@ impl Connector {
 
     fn handle_message(
         &mut self,
+        device: &DeviceImpl,
         addr: Addr,
         raw: heapless::Vec<u8, 64>,
-    ) -> Result<(), NetworkError> {
-        if !self.peers.contains(&addr) {
-            let res = self.peers.push(addr);
+    ) -> Result<(), NetcodeError> {
+        if !self.peer_addrs.contains(&addr) {
+            device.log_debug("netcode", "new device discovered");
+            let res = self.peer_addrs.push(addr);
             if res.is_err() {
-                todo!();
+                return Err(NetcodeError::PeerListFull);
             }
-            self.greet_peer(addr)?;
+            self.send_intro(device, addr)?;
         }
         if raw == b"HELLO" {
             return Ok(());
         }
-        let msg = match Message::deserialize(&raw) {
-            Ok(msg) => msg,
-            Err(_) => todo!(),
-        };
+        let msg = Message::decode(&raw)?;
         match msg {
-            Message::Req(req) => self.handle_req(addr, req),
-            Message::Resp(resp) => self.handle_resp(addr, resp),
+            Message::Req(req) => self.handle_req(device, addr, req),
+            Message::Resp(resp) => self.handle_resp(device, addr, resp),
         }
     }
 
-    fn handle_req(&mut self, addr: Addr, req: Req) -> Result<(), NetworkError> {
+    fn handle_req(
+        &mut self,
+        device: &DeviceImpl,
+        addr: Addr,
+        req: Req,
+    ) -> Result<(), NetcodeError> {
         match req {
-            Req::Intro => self.greet_peer(addr),
+            Req::Intro => self.send_intro(device, addr),
         }
     }
 
-    fn handle_resp(&mut self, addr: Addr, resp: Resp) -> Result<(), NetworkError> {
+    fn handle_resp(
+        &mut self,
+        device: &DeviceImpl,
+        addr: Addr,
+        resp: Resp,
+    ) -> Result<(), NetcodeError> {
         match resp {
-            Resp::Intro(_) => todo!(),
+            Resp::Intro(intro) => self.handle_intro(device, addr, intro),
         }
     }
 
-    fn greet_peer(&mut self, addr: Addr) -> Result<(), NetworkError> {
-        todo!()
+    fn handle_intro(
+        &mut self,
+        device: &DeviceImpl,
+        addr: Addr,
+        intro: Intro,
+    ) -> Result<(), NetcodeError> {
+        for info in &self.peer_infos {
+            if info.addr == addr {
+                return Ok(());
+            }
+        }
+        device.log_debug("netcode", &intro.name);
+        let info = PeerInfo {
+            addr,
+            name: intro.name,
+            version: intro.version,
+        };
+        let res = self.peer_infos.push(info);
+        if res.is_err() {
+            return Err(NetcodeError::PeerListFull);
+        }
+        Ok(())
+    }
+
+    fn send_intro(&mut self, device: &DeviceImpl, addr: Addr) -> Result<(), NetcodeError> {
+        let intro = Intro {
+            name:    self.me.name.clone(),
+            version: self.me.version,
+        };
+        let msg = Message::Resp(intro.into());
+        let mut buf = [0u8, 64];
+        let raw = msg.encode(&mut buf)?;
+        self.net.send(addr, raw)?;
+        Ok(())
     }
 }

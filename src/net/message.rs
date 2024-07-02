@@ -33,6 +33,12 @@ pub(crate) enum Resp {
     // Input(Input),
 }
 
+impl From<Intro> for Resp {
+    fn from(v: Intro) -> Self {
+        Self::Intro(v)
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Intro {
     pub name:    heapless::String<16>,
