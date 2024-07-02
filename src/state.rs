@@ -109,18 +109,19 @@ impl State {
         if !self.connector.get_mut().is_none() {
             return;
         }
-        let name = self
-            .read_name()
-            .unwrap_or_else(|| heapless::String::from_str("anon").unwrap());
+        let name = self.read_name().unwrap_or_default();
+        // TODO: validate the name
         let me = MyInfo { name, version: 1 };
         let net = self.device.network();
         self.connector.set(Some(Connector::new(me, net)));
     }
 
     fn read_name(&mut self) -> Option<heapless::String<16>> {
-        let mut name = heapless::String::<16>::new();
+        let mut buf = heapless::Vec::<u8, 16>::from_slice(&[0; 16]).unwrap();
         let mut file = self.device.open_file(&["sys", "name"])?;
-        file.read(unsafe { name.as_bytes_mut() }).ok()?;
+        let size = file.read(&mut buf).ok()?;
+        buf.truncate(size);
+        let name = heapless::String::<16>::from_utf8(buf).unwrap();
         Some(name)
     }
 

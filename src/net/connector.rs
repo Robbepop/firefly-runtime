@@ -136,11 +136,8 @@ impl Connector {
                 return Ok(());
             }
         }
-        if intro.name.is_empty() {
-            device.log_debug("netcode", "new no-name device connected");
-        } else {
-            device.log_debug("netcode", &intro.name);
-        }
+        // TODO: validate the name
+        device.log_debug("netcode", &intro.name);
         let info = PeerInfo {
             addr,
             name: intro.name,
