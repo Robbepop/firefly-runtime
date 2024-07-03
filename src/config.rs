@@ -13,8 +13,8 @@ where
     D: DrawTarget<Color = C> + OriginDimensions,
     C: RgbColor + FromRGB,
 {
-    pub id:      Option<FullID>,
-    pub device:  DeviceImpl,
+    pub id: Option<FullID>,
+    pub device: DeviceImpl,
     pub display: D,
 }
 
@@ -22,7 +22,7 @@ where
 #[derive(Clone)]
 pub struct FullID {
     author: String<16>,
-    app:    String<16>,
+    app: String<16>,
 }
 
 impl FullID {

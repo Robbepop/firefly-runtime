@@ -11,8 +11,8 @@ where
     C: PixelColor + IntoStorage<Storage = u8>,
 {
     target: &'a mut D,
-    swaps:  [Option<Gray4>; 16],
-    color:  PhantomData<C>,
+    swaps: [Option<Gray4>; 16],
+    color: PhantomData<C>,
 }
 
 impl<'a, D, C> BPPAdapter<'a, D, C>

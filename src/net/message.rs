@@ -41,6 +41,6 @@ impl From<Intro> for Resp {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Intro {
-    pub name:    heapless::String<16>,
+    pub name: heapless::String<16>,
     pub version: u16,
 }

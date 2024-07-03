@@ -11,7 +11,7 @@ pub(crate) struct RingBuf<T: Copy> {
     /// The current frame.
     frame: u32,
     /// The circular buffer of values for each frame.
-    data:  [Option<(u32, T)>; BUF_SIZE],
+    data: [Option<(u32, T)>; BUF_SIZE],
 }
 
 impl<T: Copy> RingBuf<T> {
@@ -20,7 +20,7 @@ impl<T: Copy> RingBuf<T> {
     pub fn new() -> Self {
         Self {
             frame: 0,
-            data:  [Self::INIT; BUF_SIZE],
+            data: [Self::INIT; BUF_SIZE],
         }
     }
 
