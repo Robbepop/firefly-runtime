@@ -17,6 +17,11 @@ pub(crate) struct PeerInfo {
     pub version: u16,
 }
 
+/// Connector establishes network connection between devices.
+///
+/// If you play games with friends, you establish the connection once
+/// at the beginning of the evening and it stays on as long as
+/// all the devices are turned on.
 pub(crate) struct Connector {
     pub me: MyInfo,
     net: NetworkImpl,
@@ -49,9 +54,6 @@ impl Connector {
     }
 
     pub fn update(&mut self, device: &DeviceImpl) {
-        if self.stopped {
-            return;
-        }
         let res = self.update_inner(device);
         if let Err(err) = res {
             device.log_error("netcode", err);
@@ -64,11 +66,30 @@ impl Connector {
         Ok(())
     }
 
-    // pub fn finalize(self) {
-    //     todo!()
-    // }
+    pub fn finalize(self) -> Connection {
+        let mut peers = heapless::Vec::<Peer, 8>::new();
+        for peer in self.peer_infos {
+            let peer = Peer {
+                addr: Some(peer.addr),
+                name: peer.name,
+            };
+            peers.push(peer).ok().unwrap();
+        }
+        let me = Peer {
+            addr: None,
+            name: self.me.name,
+        };
+        peers.push(me).ok().unwrap();
+        Connection {
+            net: self.net,
+            peers,
+        }
+    }
 
     fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
+        if self.stopped {
+            return Ok(());
+        }
         if !self.started {
             self.started = true;
             self.net.start()?;

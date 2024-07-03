@@ -95,7 +95,7 @@ impl State {
                             if let Err(err) = res {
                                 self.device.log_error("netcode", err);
                             }
-                            // todo!()
+                            self.connector.set(None);
                         }
                         ConnectStatus::Finished => {
                             self.connect_scene = None;
