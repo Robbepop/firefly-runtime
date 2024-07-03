@@ -8,6 +8,8 @@ use embedded_graphics::pixelcolor::RgbColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::text::Text;
 
+use super::Connector;
+
 const FONT_HEIGHT: i32 = 9;
 const X: i32 = 120 - 3 * 13;
 const Y: i32 = 71;
@@ -26,6 +28,22 @@ impl ConnectScene {
     }
 
     pub fn render<D, C, E>(&self, state: &State, display: &mut D) -> Result<(), E>
+    where
+        D: DrawTarget<Color = C, Error = E> + OriginDimensions,
+        C: RgbColor + FromRGB,
+    {
+        let connector = state.connector.replace(None);
+        let res = if let Some(connector) = &connector {
+            self.render_inner(&connector, display)
+        } else {
+            Ok(())
+        };
+        state.connector.replace(connector);
+        res
+    }
+
+    /// Show the connector state.
+    fn render_inner<D, C, E>(&self, connector: &Connector, display: &mut D) -> Result<(), E>
     where
         D: DrawTarget<Color = C, Error = E> + OriginDimensions,
         C: RgbColor + FromRGB,
@@ -53,44 +71,55 @@ impl ConnectScene {
             text.draw(display)?;
         }
 
-        let connector = state.connector.replace(None);
-        if let Some(connector) = &connector {
-            {
-                let point = Point::new(X, Y);
-                let text_style = MonoTextStyle::new(&FONT_6X9, black);
-                let text = Text::new("you:", point, text_style);
-                text.draw(display)?;
-            }
-            {
-                let point = Point::new(X + 6 * 5, Y);
-                let text_style = MonoTextStyle::new(&FONT_6X9, blue);
-                let text = Text::new(&connector.me.name, point, text_style);
-                text.draw(display)?;
-            }
-
-            let text_style = MonoTextStyle::new(&FONT_6X9, blue);
-            let mut addrs = connector.peer_addrs().clone();
-            let peers = connector.peer_infos();
-            let peer_count = peers.len() as i32;
-            for (peer, i) in connector.peer_infos().iter().zip(0..) {
-                addrs.retain(|addr| *addr != peer.addr);
-                let point = Point::new(X, Y + FONT_HEIGHT + FONT_HEIGHT * i);
-                let text = if peer.name.is_empty() {
-                    "<empty>"
-                } else {
-                    &peer.name
-                };
-                let text = Text::new(text, point, text_style);
-                text.draw(display)?;
-            }
-            for (_, i) in addrs.iter().zip(peer_count..) {
-                let point = Point::new(X, Y + 9 * i);
-                let text = Text::new("???", point, text_style);
-                text.draw(display)?;
-            }
+        {
+            let point = Point::new(X, Y);
+            let text_style = MonoTextStyle::new(&FONT_6X9, black);
+            let text = Text::new("you:", point, text_style);
+            text.draw(display)?;
         }
-        state.connector.replace(connector);
+        {
+            let point = Point::new(X + 6 * 5, Y);
+            let text_style = MonoTextStyle::new(&FONT_6X9, blue);
+            let text = if connector.me.name.is_empty() {
+                "<empty>"
+            } else {
+                &connector.me.name
+            };
+            let text = Text::new(text, point, text_style);
+            text.draw(display)?;
+        }
+
+        self.render_peers_list(connector, display)?;
 
         Ok(())
+    }
+
+    /// Show the list of connected peers.
+    fn render_peers_list<D, C, E>(&self, connector: &Connector, display: &mut D) -> Result<(), E>
+    where
+        D: DrawTarget<Color = C, Error = E> + OriginDimensions,
+        C: RgbColor + FromRGB,
+    {
+        let blue = C::from_rgb(0x3b, 0x5d, 0xc9);
+        let text_style = MonoTextStyle::new(&FONT_6X9, blue);
+        let mut addrs = connector.peer_addrs().clone();
+        let peers = connector.peer_infos();
+        let peer_count = peers.len() as i32;
+        for (peer, i) in connector.peer_infos().iter().zip(0..) {
+            addrs.retain(|addr| *addr != peer.addr);
+            let point = Point::new(X, Y + FONT_HEIGHT + FONT_HEIGHT * i);
+            let text = if peer.name.is_empty() {
+                "<empty>"
+            } else {
+                &peer.name
+            };
+            let text = Text::new(text, point, text_style);
+            text.draw(display)?;
+        }
+        Ok(for (_, i) in addrs.iter().zip(peer_count..) {
+            let point = Point::new(X, Y + 9 * i);
+            let text = Text::new("???", point, text_style);
+            text.draw(display)?;
+        })
     }
 }
