@@ -72,18 +72,22 @@ impl Connector {
             let peer = Peer {
                 addr: Some(peer.addr),
                 name: peer.name,
+                ready: false,
             };
             peers.push(peer).ok().unwrap();
         }
         let me = Peer {
             addr: None,
             name: self.me.name,
+            ready: false,
         };
         peers.push(me).ok().unwrap();
         Connection {
-            net: self.net,
             peers,
+            app: None,
+            net: self.net,
             last_sync: None,
+            last_ready: None,
         }
     }
 

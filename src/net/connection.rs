@@ -1,7 +1,10 @@
+use crate::FullID;
+
 use super::*;
 use firefly_device::*;
 
 const SYNC_EVERY: Duration = Duration::from_ms(100);
+const READY_EVERY: Duration = Duration::from_ms(100);
 const MAX_PEERS: usize = 8;
 const MSG_SIZE: usize = 64;
 type Addr = <NetworkImpl as Network>::Addr;
@@ -10,6 +13,7 @@ pub(crate) struct Peer {
     /// If address is None, the peer is the current device.
     pub addr: Option<Addr>,
     pub name: heapless::String<16>,
+    pub ready: bool,
 }
 
 /// Connection is a result of connector.
@@ -21,9 +25,11 @@ pub(crate) struct Peer {
 /// This object is allocated while your are in the launcher.
 /// Its job is to launch an app for everyone when someone picks one to play.
 pub(crate) struct Connection {
+    pub app: Option<FullID>,
     pub peers: heapless::Vec<Peer, MAX_PEERS>,
     pub(super) net: NetworkImpl,
     pub(super) last_sync: Option<Instant>,
+    pub(super) last_ready: Option<Instant>,
 }
 
 impl Connection {
@@ -37,6 +43,7 @@ impl Connection {
     fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
         let now = device.now();
         self.sync(now)?;
+        self.ready(now)?;
         if let Some((addr, msg)) = self.net.recv()? {
             self.handle_message(device, addr, msg)?;
         }
@@ -52,6 +59,33 @@ impl Connection {
         }
         self.last_sync = Some(now);
         let msg = Message::Req(Req::Start);
+        let mut buf = alloc::vec![0u8; MSG_SIZE];
+        let raw = match msg.encode(&mut buf) {
+            Ok(raw) => raw,
+            Err(err) => return Err(NetcodeError::Serialize(err)),
+        };
+        for peer in &self.peers {
+            if let Some(addr) = peer.addr {
+                self.net.send(addr, raw)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Tell other devices if we are ready to start.
+    fn ready(&mut self, now: Instant) -> Result<(), NetcodeError> {
+        // Say we're ready only if we are actually ready:
+        // if we know the next app to launch.
+        if self.app.is_none() {
+            return Ok(());
+        }
+        if let Some(prev) = self.last_ready {
+            if now - prev < READY_EVERY {
+                return Ok(());
+            }
+        }
+        self.last_ready = Some(now);
+        let msg = Message::Resp(Resp::Ready);
         let mut buf = alloc::vec![0u8; MSG_SIZE];
         let raw = match msg.encode(&mut buf) {
             Ok(raw) => raw,
@@ -99,6 +133,28 @@ impl Connection {
         addr: Addr,
         resp: Resp,
     ) -> Result<(), NetcodeError> {
-        todo!()
+        match resp {
+            Resp::Start(id) => {
+                self.app = Some(id);
+            }
+            Resp::Ready => {
+                if let Some(peer) = self.get_peer(addr) {
+                    peer.ready = true;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn get_peer(&mut self, addr: Addr) -> Option<&mut Peer> {
+        for peer in &mut self.peers {
+            if let Some(peer_addr) = peer.addr {
+                if peer_addr == addr {
+                    return Some(peer);
+                }
+            }
+        }
+        None
     }
 }

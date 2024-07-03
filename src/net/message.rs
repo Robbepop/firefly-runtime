@@ -29,6 +29,7 @@ pub(crate) enum Req {
 pub(crate) enum Resp {
     Intro(Intro),
     Start(FullID),
+    Ready,
     // State(State),
     // Input(Input),
 }
