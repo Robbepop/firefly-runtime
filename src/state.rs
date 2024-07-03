@@ -75,14 +75,14 @@ impl State {
 
     /// Update the state: read inputs, handle system commands.
     pub(crate) fn update(&mut self) -> Option<u8> {
+        self.input = self.device.read_input();
         let connector = self.connector.get_mut();
         if let Some(connector) = connector {
             connector.update(&self.device);
             if let Some(scene) = self.connect_scene.as_mut() {
-                scene.update();
+                scene.update(&self.input);
             }
         }
-        self.input = self.device.read_input();
         let action = self.menu.handle_input(&self.input);
         if let Some(action) = action {
             match action {

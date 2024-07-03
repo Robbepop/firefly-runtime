@@ -8,6 +8,7 @@ use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::RgbColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::text::Text;
+use firefly_device::InputState;
 
 use super::Connector;
 
@@ -18,15 +19,32 @@ const Y: i32 = 71;
 
 pub(crate) struct ConnectScene {
     frame: usize,
+    any_pressed: bool,
+    stoped: bool,
 }
 
 impl ConnectScene {
     pub fn new() -> Self {
-        Self { frame: 0 }
+        Self {
+            frame: 0,
+            any_pressed: false,
+            stoped: false,
+        }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, input: &Option<InputState>) {
         self.frame += 1;
+        if let Some(input) = input {
+            let any_pressed = input.buttons.iter().any(|x| *x);
+            if any_pressed {
+                self.any_pressed = true
+            } else {
+                if self.any_pressed {
+                    self.stoped = true
+                }
+                self.any_pressed = false
+            }
+        }
     }
 
     pub fn render<D, C, E>(&self, state: &State, display: &mut D) -> Result<(), E>
@@ -58,7 +76,7 @@ impl ConnectScene {
         }
 
         // Render gray "Connecting..." message
-        {
+        if !self.stoped {
             let gray = C::from_rgb(0x94, 0xb0, 0xc2);
             let text_style = MonoTextStyle::new(&FONT_6X9, gray);
             let point = Point::new(X, Y - FONT_HEIGHT);
@@ -69,7 +87,7 @@ impl ConnectScene {
 
         // Render black "Connecting..." message on top of the gray one.
         // It is sliced over time to show that the device is not frozen.
-        {
+        if !self.stoped {
             let quarter_second = self.frame / 15;
             let text_style = MonoTextStyle::new(&FONT_6X9, black);
             let text = "Connecting...";
@@ -105,7 +123,8 @@ impl ConnectScene {
 
         self.render_peers_list(connector, display)?;
 
-        {
+        // Show gray "press any button to stop" at the bottom of the screen.
+        if !self.stoped {
             let gray = C::from_rgb(0x94, 0xb0, 0xc2);
             let point = Point::new((WIDTH as i32 - 26 * FONT_WIDTH) / 2, 140);
             let text_style = MonoTextStyle::new(&FONT_6X9, gray);
