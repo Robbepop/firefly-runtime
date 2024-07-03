@@ -48,25 +48,32 @@ impl ConnectScene {
         D: DrawTarget<Color = C, Error = E> + OriginDimensions,
         C: RgbColor + FromRGB,
     {
-        let quarter_second = self.frame / 15;
-        let white = C::from_rgb(0xf4, 0xf4, 0xf4);
-        let gray = C::from_rgb(0x56, 0x6c, 0x86);
         let black = C::from_rgb(0x1a, 0x1c, 0x2c);
-        let blue = C::from_rgb(0x3b, 0x5d, 0xc9);
-        display.clear(white)?;
-        let point = Point::new(X, Y - FONT_HEIGHT);
 
         {
+            let white = C::from_rgb(0xf4, 0xf4, 0xf4);
+            display.clear(white)?;
+        }
+
+        {
+            let gray = C::from_rgb(0x94, 0xb0, 0xc2);
             let text_style = MonoTextStyle::new(&FONT_6X9, gray);
+            let point = Point::new(X, Y - FONT_HEIGHT);
             let text = "Connecting...";
             let text = Text::new(text, point, text_style);
             text.draw(display)?;
         }
 
         {
+            let quarter_second = self.frame / 15;
             let text_style = MonoTextStyle::new(&FONT_6X9, black);
             let text = "Connecting...";
-            let text = &text[..(quarter_second % 13) + 1];
+            let (shift, text) = if quarter_second % 28 >= 14 {
+                (quarter_second as i32 % 14, &text[quarter_second % 14..])
+            } else {
+                (0, &text[..(quarter_second % 14)])
+            };
+            let point = Point::new(X + shift * 6, Y - FONT_HEIGHT);
             let text = Text::new(text, point, text_style);
             text.draw(display)?;
         }
@@ -78,6 +85,7 @@ impl ConnectScene {
             text.draw(display)?;
         }
         {
+            let blue = C::from_rgb(0x3b, 0x5d, 0xc9);
             let point = Point::new(X + 6 * 5, Y);
             let text_style = MonoTextStyle::new(&FONT_6X9, blue);
             let text = if connector.me.name.is_empty() {
