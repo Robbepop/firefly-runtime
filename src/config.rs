@@ -6,6 +6,7 @@ use embedded_graphics::pixelcolor::RgbColor;
 use firefly_device::*;
 use firefly_meta::validate_id;
 use heapless::String;
+use serde::{Deserialize, Serialize};
 
 /// Contains the basic information and resources needed to run an app.
 pub struct RuntimeConfig<D, C>
@@ -19,7 +20,7 @@ where
 }
 
 /// The author and app ID combo. Must be unique. Cannot be changed.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FullID {
     author: String<16>,
     app: String<16>,

@@ -1,3 +1,4 @@
+use crate::config::FullID;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -19,18 +20,23 @@ impl Message {
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Req {
     Intro,
-    // Start,
+    Start,
     // State,
     // Input,
 }
 
 #[derive(Serialize, Deserialize)]
-
 pub(crate) enum Resp {
     Intro(Intro),
-    // Start(Start),
+    Start(FullID),
     // State(State),
     // Input(Input),
+}
+
+impl From<FullID> for Resp {
+    fn from(v: FullID) -> Self {
+        Self::Start(v)
+    }
 }
 
 impl From<Intro> for Resp {

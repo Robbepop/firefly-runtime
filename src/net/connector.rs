@@ -83,6 +83,7 @@ impl Connector {
         Connection {
             net: self.net,
             peers,
+            last_sync: None,
         }
     }
 
@@ -151,6 +152,7 @@ impl Connector {
     ) -> Result<(), NetcodeError> {
         match req {
             Req::Intro => self.send_intro(device, addr),
+            _ => Ok(()),
         }
     }
 
@@ -162,6 +164,7 @@ impl Connector {
     ) -> Result<(), NetcodeError> {
         match resp {
             Resp::Intro(intro) => self.handle_intro(device, addr, intro),
+            _ => Ok(()),
         }
     }
 

@@ -1,6 +1,7 @@
 use super::*;
 use firefly_device::*;
 
+const SYNC_EVERY: Duration = Duration::from_ms(100);
 const MAX_PEERS: usize = 8;
 const MSG_SIZE: usize = 64;
 type Addr = <NetworkImpl as Network>::Addr;
@@ -20,8 +21,9 @@ pub(crate) struct Peer {
 /// This object is allocated while your are in the launcher.
 /// Its job is to launch an app for everyone when someone picks one to play.
 pub(crate) struct Connection {
-    pub(super) net: NetworkImpl,
     pub peers: heapless::Vec<Peer, MAX_PEERS>,
+    pub(super) net: NetworkImpl,
+    pub(super) last_sync: Option<Instant>,
 }
 
 impl Connection {
@@ -31,9 +33,34 @@ impl Connection {
             device.log_error("netcode", err);
         }
     }
+
     fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
+        let now = device.now();
+        self.sync(now)?;
         if let Some((addr, msg)) = self.net.recv()? {
             self.handle_message(device, addr, msg)?;
+        }
+        Ok(())
+    }
+
+    /// Ask other devices if they already started.
+    fn sync(&mut self, now: Instant) -> Result<(), NetcodeError> {
+        if let Some(prev) = self.last_sync {
+            if now - prev < SYNC_EVERY {
+                return Ok(());
+            }
+        }
+        self.last_sync = Some(now);
+        let msg = Message::Req(Req::Start);
+        let mut buf = alloc::vec![0u8; MSG_SIZE];
+        let raw = match msg.encode(&mut buf) {
+            Ok(raw) => raw,
+            Err(err) => return Err(NetcodeError::Serialize(err)),
+        };
+        for peer in &self.peers {
+            if let Some(addr) = peer.addr {
+                self.net.send(addr, raw)?;
+            }
         }
         Ok(())
     }
