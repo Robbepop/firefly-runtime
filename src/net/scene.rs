@@ -12,7 +12,7 @@ use firefly_device::InputState;
 
 use super::Connector;
 
-const FONT_HEIGHT: i32 = 9;
+const FONT_HEIGHT: i32 = 10;
 const FONT_WIDTH: i32 = 6;
 const X: i32 = 120 - 3 * 13;
 const Y: i32 = 71;
@@ -20,7 +20,7 @@ const Y: i32 = 71;
 pub(crate) struct ConnectScene {
     frame: usize,
     any_pressed: bool,
-    stoped: bool,
+    stopped: bool,
 }
 
 impl ConnectScene {
@@ -28,7 +28,7 @@ impl ConnectScene {
         Self {
             frame: 0,
             any_pressed: false,
-            stoped: false,
+            stopped: false,
         }
     }
 
@@ -37,12 +37,12 @@ impl ConnectScene {
         if let Some(input) = input {
             let any_pressed = input.buttons.iter().any(|x| *x);
             if any_pressed {
-                self.any_pressed = true
+                self.any_pressed = true;
             } else {
                 if self.any_pressed {
-                    self.stoped = true
+                    self.stopped = true;
                 }
-                self.any_pressed = false
+                self.any_pressed = false;
             }
         }
     }
@@ -76,7 +76,7 @@ impl ConnectScene {
         }
 
         // Render gray "Connecting..." message
-        if !self.stoped {
+        if !self.stopped {
             let gray = C::from_rgb(0x94, 0xb0, 0xc2);
             let text_style = MonoTextStyle::new(&FONT_6X9, gray);
             let point = Point::new(X, Y - FONT_HEIGHT);
@@ -87,7 +87,7 @@ impl ConnectScene {
 
         // Render black "Connecting..." message on top of the gray one.
         // It is sliced over time to show that the device is not frozen.
-        if !self.stoped {
+        if !self.stopped {
             let quarter_second = self.frame / 15;
             let text_style = MonoTextStyle::new(&FONT_6X9, black);
             let text = "Connecting...";
@@ -127,13 +127,13 @@ impl ConnectScene {
         {
             let gray = C::from_rgb(0x94, 0xb0, 0xc2);
             let text_style = MonoTextStyle::new(&FONT_6X9, gray);
-            let text = if self.stoped {
+            let text = if self.stopped {
                 "press A to continue / B to cancel"
             } else {
                 "(press any button to stop)"
             };
             let width = text.len() as i32 * FONT_WIDTH;
-            let point = Point::new((WIDTH as i32 - width) / 2, 140);
+            let point = Point::new((WIDTH as i32 - width) / 2, 150);
             let text = Text::new(text, point, text_style);
             text.draw(display)?;
         }
@@ -164,11 +164,11 @@ impl ConnectScene {
             text.draw(display)?;
         }
         // Show peers that are advertised but haven't sent intro yet
-        // but only if connection phase is not stoped yet.
-        // If it is stoped, all peers without intro will be discarded.
-        if !self.stoped {
+        // but only if connection phase is not stopped yet.
+        // If it is stopped, all peers without intro will be discarded.
+        if !self.stopped {
             for (_, i) in addrs.iter().zip(peer_count..) {
-                let point = Point::new(X, Y + 9 * i);
+                let point = Point::new(X, Y + FONT_HEIGHT * (i + 1));
                 let text = Text::new("???", point, text_style);
                 text.draw(display)?;
             }
