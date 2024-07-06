@@ -20,10 +20,12 @@ impl From<Req> for Message {
 }
 
 impl Message {
+    // TODO: return NetworkError
     pub fn decode(s: &[u8]) -> Result<Self, postcard::Error> {
         postcard::from_bytes(s)
     }
 
+    // TODO: return NetworkError
     pub fn encode<'a>(&self, buf: &'a mut [u8]) -> Result<&'a mut [u8], postcard::Error> {
         postcard::to_slice(self, buf)
     }
@@ -33,16 +35,20 @@ impl Message {
 pub(crate) enum Req {
     Intro,
     Start,
-    // State,
-    // Input,
+    State(u32),
 }
 
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Resp {
     Intro(Intro),
     Start(FullID),
-    // State(State),
-    // Input(Input),
+    State(FrameState),
+}
+
+impl From<FrameState> for Resp {
+    fn from(v: FrameState) -> Self {
+        Self::State(v)
+    }
 }
 
 impl From<FullID> for Resp {
@@ -65,8 +71,8 @@ pub(crate) struct Intro {
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub(crate) struct FrameState {
-    frame: u32,
-    input: Input,
+    pub frame: u32,
+    pub input: Input,
     // rand: Option<...>
     // rand_key: Option<...>
 }
