@@ -2,6 +2,7 @@ use crate::FullID;
 
 use super::*;
 use firefly_device::*;
+use ring::RingBuf;
 
 const SYNC_EVERY: Duration = Duration::from_ms(100);
 const READY_EVERY: Duration = Duration::from_ms(100);
@@ -69,6 +70,24 @@ impl Connection {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn finalize(self) -> FrameSyncer {
+        let mut peers = heapless::Vec::<FSPeer, 8>::new();
+        for peer in self.peers {
+            let peer = FSPeer {
+                addr: peer.addr,
+                name: peer.name,
+                states: RingBuf::new(),
+            };
+            peers.push(peer).ok().unwrap();
+        }
+        FrameSyncer {
+            peers,
+            net: self.net,
+            last_sync: None,
+            frame: 0,
+        }
     }
 
     fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
