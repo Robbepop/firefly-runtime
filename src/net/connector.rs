@@ -89,6 +89,8 @@ impl Connector {
             ready: false,
         };
         peers.push(me).ok().unwrap();
+        let local_addr = self.net.local_addr();
+        peers.sort_by_key(|p| p.addr.unwrap_or(local_addr));
         Connection {
             peers,
             app: None,
