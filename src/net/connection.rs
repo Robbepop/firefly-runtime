@@ -138,14 +138,11 @@ impl Connection {
     }
 
     fn handle_resp(&mut self, addr: Addr, resp: Resp) -> Result<(), NetcodeError> {
-        match resp {
-            Resp::Start(app) => {
-                self.set_app(app)?;
-                if let Some(peer) = self.get_peer(addr) {
-                    peer.ready = true;
-                }
+        if let Resp::Start(app) = resp {
+            self.set_app(app)?;
+            if let Some(peer) = self.get_peer(addr) {
+                peer.ready = true;
             }
-            _ => {}
         }
         Ok(())
     }

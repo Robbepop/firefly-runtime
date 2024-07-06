@@ -160,10 +160,10 @@ impl Connector {
         addr: Addr,
         req: Req,
     ) -> Result<(), NetcodeError> {
-        match req {
-            Req::Intro => self.send_intro(device, addr),
-            _ => Ok(()),
+        if matches!(req, Req::Intro) {
+            self.send_intro(device, addr)?
         }
+        Ok(())
     }
 
     fn handle_resp(
@@ -172,10 +172,10 @@ impl Connector {
         addr: Addr,
         resp: Resp,
     ) -> Result<(), NetcodeError> {
-        match resp {
-            Resp::Intro(intro) => self.handle_intro(device, addr, intro),
-            _ => Ok(()),
+        if let Resp::Intro(intro) = resp {
+            self.handle_intro(device, addr, intro)?;
         }
+        Ok(())
     }
 
     fn handle_intro(

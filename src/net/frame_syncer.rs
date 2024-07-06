@@ -93,15 +93,12 @@ impl FrameSyncer {
     }
 
     fn handle_resp(&mut self, addr: Addr, resp: Resp) -> Result<(), NetcodeError> {
-        match resp {
-            Resp::State(state) => {
-                for peer in self.peers.iter_mut() {
-                    if peer.addr == Some(addr) {
-                        peer.states.insert(state.frame, state);
-                    }
+        if let Resp::State(state) = resp {
+            for peer in self.peers.iter_mut() {
+                if peer.addr == Some(addr) {
+                    peer.states.insert(state.frame, state);
                 }
             }
-            _ => {}
         }
         Ok(())
     }
