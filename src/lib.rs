@@ -14,7 +14,6 @@ mod linking;
 mod menu;
 mod net;
 mod png;
-mod ring;
 mod runtime;
 mod state;
 

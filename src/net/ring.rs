@@ -47,7 +47,7 @@ impl<T: Copy> RingBuf<T> {
     /// The given frame must be not too far ahead or behind the current frame
     /// and must have been inserted earlier into the buffer.
     /// If any of this isn't true, None is returned.
-    pub fn get(&mut self, frame: u32) -> Option<T> {
+    pub fn get(&self, frame: u32) -> Option<T> {
         if self.frame.abs_diff(frame) > MAX_DRIFT {
             return None;
         }

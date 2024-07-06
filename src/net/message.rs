@@ -62,3 +62,18 @@ pub(crate) struct Intro {
     pub name: heapless::String<16>,
     pub version: u16,
 }
+
+#[derive(Copy, Clone, Serialize, Deserialize)]
+pub(crate) struct FrameState {
+    frame: u32,
+    input: Input,
+    // rand: Option<...>
+    // rand_key: Option<...>
+}
+
+#[derive(Copy, Clone, Serialize, Deserialize)]
+pub(crate) struct Input {
+    x: i16,
+    y: i16,
+    buttons: u8,
+}
