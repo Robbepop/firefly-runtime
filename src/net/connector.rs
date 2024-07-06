@@ -147,10 +147,7 @@ impl Connector {
         if raw.is_empty() {
             return Err(NetcodeError::EmptyBufferIn);
         }
-        let msg = match Message::decode(&raw) {
-            Ok(msg) => msg,
-            Err(err) => return Err(NetcodeError::Deserialize(err)),
-        };
+        let msg = Message::decode(&raw)?;
         match msg {
             Message::Req(req) => self.handle_req(device, addr, req),
             Message::Resp(resp) => self.handle_resp(device, addr, resp),
@@ -213,10 +210,7 @@ impl Connector {
         };
         let msg = Message::Resp(intro.into());
         let mut buf = alloc::vec![0u8; MSG_SIZE];
-        let raw = match msg.encode(&mut buf) {
-            Ok(raw) => raw,
-            Err(err) => return Err(NetcodeError::Serialize(err)),
-        };
+        let raw = msg.encode(&mut buf)?;
         if raw.is_empty() {
             return Err(NetcodeError::EmptyBufferOut);
         }

@@ -50,10 +50,7 @@ impl FrameSyncer {
         self.last_sync = Some(now);
         let msg = Message::Req(Req::State(self.frame));
         let mut buf = alloc::vec![0u8; MSG_SIZE];
-        let raw = match msg.encode(&mut buf) {
-            Ok(raw) => raw,
-            Err(err) => return Err(NetcodeError::Serialize(err)),
-        };
+        let raw = msg.encode(&mut buf)?;
         for peer in &self.peers {
             let Some(addr) = peer.addr else {
                 continue;
@@ -77,10 +74,7 @@ impl FrameSyncer {
         if raw.is_empty() {
             return Err(NetcodeError::EmptyBufferIn);
         }
-        let msg = match Message::decode(&raw) {
-            Ok(msg) => msg,
-            Err(err) => return Err(NetcodeError::Deserialize(err)),
-        };
+        let msg = Message::decode(&raw)?;
         match msg {
             Message::Req(req) => self.handle_req(addr, req),
             Message::Resp(resp) => self.handle_resp(addr, resp),
@@ -94,10 +88,7 @@ impl FrameSyncer {
             if let Some(state) = state {
                 let msg = Message::Resp(Resp::State(state));
                 let mut buf = alloc::vec![0u8; MSG_SIZE];
-                let raw = match msg.encode(&mut buf) {
-                    Ok(raw) => raw,
-                    Err(err) => return Err(NetcodeError::Serialize(err)),
-                };
+                let raw = msg.encode(&mut buf)?;
                 self.net.send(addr, raw)?;
             }
         }

@@ -1,6 +1,8 @@
 use crate::config::FullID;
 use serde::{Deserialize, Serialize};
 
+use super::NetcodeError;
+
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Message {
     Req(Req),
@@ -21,13 +23,21 @@ impl From<Req> for Message {
 
 impl Message {
     // TODO: return NetworkError
-    pub fn decode(s: &[u8]) -> Result<Self, postcard::Error> {
-        postcard::from_bytes(s)
+    pub fn decode(s: &[u8]) -> Result<Self, NetcodeError> {
+        let res = postcard::from_bytes(s);
+        match res {
+            Ok(raw) => Ok(raw),
+            Err(err) => Err(NetcodeError::Deserialize(err)),
+        }
     }
 
     // TODO: return NetworkError
-    pub fn encode<'a>(&self, buf: &'a mut [u8]) -> Result<&'a mut [u8], postcard::Error> {
-        postcard::to_slice(self, buf)
+    pub fn encode<'a>(&self, buf: &'a mut [u8]) -> Result<&'a mut [u8], NetcodeError> {
+        let res = postcard::to_slice(self, buf);
+        match res {
+            Ok(raw) => Ok(raw),
+            Err(err) => Err(NetcodeError::Serialize(err)),
+        }
     }
 }
 

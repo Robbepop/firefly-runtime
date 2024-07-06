@@ -121,10 +121,7 @@ impl Connection {
         if raw.is_empty() {
             return Err(NetcodeError::EmptyBufferIn);
         }
-        let msg = match Message::decode(&raw) {
-            Ok(msg) => msg,
-            Err(err) => return Err(NetcodeError::Deserialize(err)),
-        };
+        let msg = Message::decode(&raw)?;
         match msg {
             Message::Req(req) => self.handle_req(addr, req),
             Message::Resp(resp) => self.handle_resp(addr, resp),
@@ -136,10 +133,7 @@ impl Connection {
             if let Some(app) = &self.app {
                 let msg = Message::Resp(Resp::Start(app.clone()));
                 let mut buf = alloc::vec![0u8; MSG_SIZE];
-                let raw = match msg.encode(&mut buf) {
-                    Ok(raw) => raw,
-                    Err(err) => return Err(NetcodeError::Serialize(err)),
-                };
+                let raw = msg.encode(&mut buf)?;
                 self.net.send(addr, raw)?;
             }
         }
@@ -161,10 +155,7 @@ impl Connection {
 
     fn broadcast(&mut self, msg: Message) -> Result<(), NetcodeError> {
         let mut buf = alloc::vec![0u8; MSG_SIZE];
-        let raw = match msg.encode(&mut buf) {
-            Ok(raw) => raw,
-            Err(err) => return Err(NetcodeError::Serialize(err)),
-        };
+        let raw = msg.encode(&mut buf)?;
         for peer in &self.peers {
             if let Some(addr) = peer.addr {
                 self.net.send(addr, raw)?;
