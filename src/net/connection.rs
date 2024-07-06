@@ -115,6 +115,9 @@ impl Connection {
         addr: Addr,
         raw: heapless::Vec<u8, MSG_SIZE>,
     ) -> Result<(), NetcodeError> {
+        if !self.peers.iter().any(|p| p.addr == Some(addr)) {
+            return Err(NetcodeError::UnknownPeer);
+        }
         if raw.is_empty() {
             return Err(NetcodeError::EmptyBufferIn);
         }

@@ -7,6 +7,7 @@ pub(crate) enum NetcodeError {
     EmptyBufferIn,
     EmptyBufferOut,
     PeerListFull,
+    UnknownPeer,
 }
 
 impl From<firefly_device::NetworkError> for NetcodeError {
@@ -24,6 +25,7 @@ impl fmt::Display for NetcodeError {
             NetcodeError::PeerListFull => write!(f, "cannot connect more devices"),
             NetcodeError::EmptyBufferIn => write!(f, "received empty message"),
             NetcodeError::EmptyBufferOut => write!(f, "serializer produced empty message"),
+            NetcodeError::UnknownPeer => write!(f, "received message from unknown peer"),
         }
     }
 }
