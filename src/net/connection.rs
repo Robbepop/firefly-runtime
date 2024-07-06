@@ -58,17 +58,7 @@ impl Connection {
     }
 
     pub fn set_app(&mut self, app: FullID) -> Result<(), NetcodeError> {
-        let msg = Message::Resp(Resp::Start(app.clone()));
-        let mut buf = alloc::vec![0u8; MSG_SIZE];
-        let raw = match msg.encode(&mut buf) {
-            Ok(raw) => raw,
-            Err(err) => return Err(NetcodeError::Serialize(err)),
-        };
-        for peer in &self.peers {
-            if let Some(addr) = peer.addr {
-                self.net.send(addr, raw)?;
-            }
-        }
+        self.broadcast(Resp::Start(app.clone()).into())?;
         Ok(())
     }
 
@@ -77,7 +67,7 @@ impl Connection {
         self.sync(now)?;
         self.ready(now)?;
         if let Some((addr, msg)) = self.net.recv()? {
-            self.handle_message(addr, msg)?;
+            self.handle_message(device, addr, msg)?;
         }
         Ok(())
     }
@@ -90,17 +80,7 @@ impl Connection {
             }
         }
         self.last_sync = Some(now);
-        let msg = Message::Req(Req::Start);
-        let mut buf = alloc::vec![0u8; MSG_SIZE];
-        let raw = match msg.encode(&mut buf) {
-            Ok(raw) => raw,
-            Err(err) => return Err(NetcodeError::Serialize(err)),
-        };
-        for peer in &self.peers {
-            if let Some(addr) = peer.addr {
-                self.net.send(addr, raw)?;
-            }
-        }
+        self.broadcast(Req::Start.into())?;
         Ok(())
     }
 
@@ -108,31 +88,22 @@ impl Connection {
     fn ready(&mut self, now: Instant) -> Result<(), NetcodeError> {
         // Say we're ready only if we are actually ready:
         // if we know the next app to launch.
-        if self.app.is_none() {
+        let Some(app) = &self.app else {
             return Ok(());
-        }
+        };
         if let Some(prev) = self.last_ready {
             if now - prev < READY_EVERY {
                 return Ok(());
             }
         }
         self.last_ready = Some(now);
-        let msg = Message::Resp(Resp::Ready);
-        let mut buf = alloc::vec![0u8; MSG_SIZE];
-        let raw = match msg.encode(&mut buf) {
-            Ok(raw) => raw,
-            Err(err) => return Err(NetcodeError::Serialize(err)),
-        };
-        for peer in &self.peers {
-            if let Some(addr) = peer.addr {
-                self.net.send(addr, raw)?;
-            }
-        }
+        self.broadcast(Resp::Start(app.clone()).into())?;
         Ok(())
     }
 
     fn handle_message(
         &mut self,
+        device: &DeviceImpl,
         addr: Addr,
         raw: heapless::Vec<u8, MSG_SIZE>,
     ) -> Result<(), NetcodeError> {
@@ -143,6 +114,7 @@ impl Connection {
             Ok(msg) => msg,
             Err(err) => return Err(NetcodeError::Deserialize(err)),
         };
+        device.log_debug("tmp", alloc::format!("{msg:?}"));
         match msg {
             Message::Req(req) => self.handle_req(addr, req),
             Message::Resp(resp) => self.handle_resp(addr, resp),
@@ -168,13 +140,25 @@ impl Connection {
         match resp {
             Resp::Start(id) => {
                 self.app = Some(id);
-            }
-            Resp::Ready => {
                 if let Some(peer) = self.get_peer(addr) {
                     peer.ready = true;
                 }
             }
             _ => {}
+        }
+        Ok(())
+    }
+
+    fn broadcast(&mut self, msg: Message) -> Result<(), NetcodeError> {
+        let mut buf = alloc::vec![0u8; MSG_SIZE];
+        let raw = match msg.encode(&mut buf) {
+            Ok(raw) => raw,
+            Err(err) => return Err(NetcodeError::Serialize(err)),
+        };
+        for peer in &self.peers {
+            if let Some(addr) = peer.addr {
+                self.net.send(addr, raw)?;
+            }
         }
         Ok(())
     }

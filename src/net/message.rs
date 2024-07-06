@@ -1,10 +1,22 @@
 use crate::config::FullID;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum Message {
     Req(Req),
     Resp(Resp),
+}
+
+impl From<Resp> for Message {
+    fn from(v: Resp) -> Self {
+        Self::Resp(v)
+    }
+}
+
+impl From<Req> for Message {
+    fn from(v: Req) -> Self {
+        Self::Req(v)
+    }
 }
 
 impl Message {
@@ -17,7 +29,7 @@ impl Message {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum Req {
     Intro,
     Start,
@@ -25,11 +37,10 @@ pub(crate) enum Req {
     // Input,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) enum Resp {
     Intro(Intro),
     Start(FullID),
-    Ready,
     // State(State),
     // Input(Input),
 }
@@ -46,7 +57,7 @@ impl From<Intro> for Resp {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Intro {
     pub name: heapless::String<16>,
     pub version: u16,
