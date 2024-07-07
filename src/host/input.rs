@@ -18,10 +18,10 @@ pub(crate) fn read_pad(mut caller: C, player: u32) -> u32 {
     x << 16 | y
 }
 
-pub(crate) fn read_buttons(mut caller: C, _player: u32) -> u32 {
+pub(crate) fn read_buttons(mut caller: C, player: u32) -> u32 {
     let state = caller.data_mut();
     state.called = "input.read_buttons";
-    let Some(input) = &state.input else {
+    let Some(input) = get_input(state, player) else {
         return 0;
     };
     u32::from(input.buttons)
