@@ -27,6 +27,9 @@ impl Message {
         if s.is_empty() {
             return Err(NetcodeError::EmptyBufferIn);
         }
+        if s == b"HELLO" {
+            return Ok(Self::Req(Req::Hello));
+        }
         let res = postcard::from_bytes(s);
         match res {
             Ok(raw) => Ok(raw),
@@ -52,6 +55,7 @@ impl Message {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Req {
+    Hello,
     Intro,
     Start,
     State(u32),

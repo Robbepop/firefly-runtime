@@ -142,12 +142,6 @@ impl Connector {
             }
             self.send_intro(device, addr)?;
         }
-        if raw == b"HELLO" {
-            return Ok(());
-        }
-        if raw.is_empty() {
-            return Err(NetcodeError::EmptyBufferIn);
-        }
         let msg = Message::decode(&raw)?;
         match msg {
             Message::Req(req) => self.handle_req(device, addr, req),
