@@ -40,7 +40,34 @@ impl FrameSyncer {
         }
     }
 
-    pub fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
+    pub fn advance(&mut self, device: &DeviceImpl, state: FrameState) {
+        self.frame += 1;
+        for peer in &mut self.peers {
+            peer.states.advance();
+            if peer.addr.is_none() {
+                peer.states.insert(self.frame, state);
+            }
+        }
+        let msg = Message::Resp(Resp::State(state));
+        let mut buf = alloc::vec![0u8; MSG_SIZE];
+        let raw = match msg.encode(&mut buf) {
+            Ok(raw) => raw,
+            Err(err) => {
+                device.log_error("netcode", err);
+                return;
+            }
+        };
+        for peer in &mut self.peers {
+            if let Some(addr) = peer.addr {
+                let res = self.net.send(addr, raw);
+                if let Err(err) = res {
+                    device.log_error("netcode", err);
+                }
+            }
+        }
+    }
+
+    fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
         let now = device.now();
         self.sync(now)?;
         if let Some((addr, msg)) = self.net.recv()? {
