@@ -3,7 +3,7 @@ use crate::config::RuntimeConfig;
 use crate::error::Error;
 use crate::frame_buffer::HEIGHT;
 use crate::linking::link;
-use crate::state::State;
+use crate::state::{NetHandler, State};
 use crate::FullID;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::OriginDimensions;
@@ -69,7 +69,7 @@ where
 
         let module = wasmi::Module::new_streaming(&engine, stream)?;
         let now = config.device.now();
-        let state = State::new(id, config.device);
+        let state = State::new(id, config.device, config.net_handler);
         let mut store = wasmi::Store::<State>::new(&engine, state);
         let mut linker = wasmi::Linker::<State>::new(&engine);
         link(&mut linker)?;
@@ -187,10 +187,12 @@ where
     /// When runtime is created, it takes ownership of [Device]. This method releases it.
     pub fn into_config(self) -> RuntimeConfig<D, C> {
         let state = self.store.into_data();
+        let net_handler = state.net_handler.replace(NetHandler::None);
         RuntimeConfig {
             id: state.next,
             device: state.device,
             display: self.display,
+            net_handler,
         }
     }
 

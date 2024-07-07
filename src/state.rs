@@ -2,7 +2,9 @@ use crate::config::FullID;
 use crate::error::Stats;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
-use crate::net::{ConnectScene, ConnectStatus, Connection, ConnectionStatus, Connector, MyInfo};
+use crate::net::{
+    ConnectScene, ConnectStatus, Connection, ConnectionStatus, Connector, FrameSyncer, MyInfo,
+};
 use crate::png::save_png;
 use core::cell::Cell;
 use core::fmt::Display;
@@ -13,6 +15,7 @@ pub(crate) enum NetHandler {
     None,
     Connector(Connector),
     Connection(Connection),
+    FrameSyncer(FrameSyncer),
 }
 
 pub(crate) struct State {
@@ -54,7 +57,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub(crate) fn new(id: FullID, device: DeviceImpl) -> Self {
+    pub(crate) fn new(id: FullID, device: DeviceImpl, net_handler: NetHandler) -> Self {
         Self {
             device,
             id,
@@ -67,7 +70,7 @@ impl State {
             online: false,
             input: None,
             called: "",
-            net_handler: Cell::new(NetHandler::None),
+            net_handler: Cell::new(net_handler),
             connect_scene: None,
         }
     }
@@ -85,6 +88,10 @@ impl State {
                 self.exit = true;
             }
             NetHandler::Connector(_) => unreachable!("cannot launch app while connecting"),
+            // TODO: support restarting an app
+            // TODO: support leaving back to menu
+            //       (and replacing FrameSyncer with Connection)
+            NetHandler::FrameSyncer(_) => todo!("cannot re-launch running app"),
             NetHandler::Connection(c) => {
                 let res = c.set_app(app);
                 if let Err(err) = res {
@@ -105,6 +112,7 @@ impl State {
                 MenuItem::Connect => self.connect(),
                 MenuItem::ScreenShot => self.take_screenshot(),
                 MenuItem::Restart => self.set_next(self.id.clone()),
+                // TODO: quit the app for everyone
                 MenuItem::Quit => self.exit = true,
             };
         };
@@ -116,6 +124,7 @@ impl State {
             NetHandler::Connector(connector) => self.update_connector(connector),
             NetHandler::None => NetHandler::None,
             NetHandler::Connection(connection) => self.update_connection(connection),
+            NetHandler::FrameSyncer(syncer) => self.update_syncer(syncer),
         };
         self.net_handler.replace(handler);
     }
@@ -156,11 +165,17 @@ impl State {
     fn update_connection(&mut self, mut connection: Connection) -> NetHandler {
         let status = connection.update(&self.device);
         if matches!(status, ConnectionStatus::Launching) {
-            self.next = connection.app;
+            self.next = connection.app.clone();
             self.exit = true;
-            return NetHandler::None;
+            let syncer = connection.finalize();
+            return NetHandler::FrameSyncer(syncer);
         }
         NetHandler::Connection(connection)
+    }
+
+    fn update_syncer(&mut self, mut syncer: FrameSyncer) -> NetHandler {
+        syncer.update(&self.device);
+        NetHandler::FrameSyncer(syncer)
     }
 
     /// Save the current frame buffer into a PNG file.

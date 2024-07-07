@@ -1,5 +1,6 @@
 use crate::color::FromRGB;
 use crate::error::Error;
+use crate::state::NetHandler;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::pixelcolor::RgbColor;
@@ -17,6 +18,8 @@ where
     pub id: Option<FullID>,
     pub device: DeviceImpl,
     pub display: D,
+    #[allow(private_interfaces)]
+    pub net_handler: NetHandler,
 }
 
 /// The author and app ID combo. Must be unique. Cannot be changed.

@@ -23,6 +23,7 @@ pub(crate) struct FrameSyncer {
 
 impl FrameSyncer {
     pub fn ready(&self) -> bool {
+        // TODO: return timeout error if waiting for too long.
         for peer in &self.peers {
             let state = peer.states.get(self.frame);
             if state.is_none() {
@@ -32,7 +33,14 @@ impl FrameSyncer {
         true
     }
 
-    pub fn update(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
+    pub fn update(&mut self, device: &DeviceImpl) {
+        let res = self.update_inner(device);
+        if let Err(err) = res {
+            device.log_error("netcode", err);
+        }
+    }
+
+    pub fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
         let now = device.now();
         self.sync(now)?;
         if let Some((addr, msg)) = self.net.recv()? {

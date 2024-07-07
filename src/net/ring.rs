@@ -1,5 +1,3 @@
-use core::mem::MaybeUninit;
-
 const BUF_SIZE: usize = 5;
 const MAX_DRIFT: u32 = BUF_SIZE as u32 / 2;
 
