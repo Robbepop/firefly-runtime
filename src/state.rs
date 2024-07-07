@@ -38,9 +38,6 @@ pub(crate) struct State {
     /// The current state of the randomization function.
     pub seed: u32,
 
-    /// True if the netplay is active.
-    pub online: bool,
-
     /// Pointer to the app memory. Might be None if the app doesn't have memory.
     pub memory: Option<wasmi::Memory>,
 
@@ -72,7 +69,6 @@ impl State {
             memory: None,
             next: None,
             exit: false,
-            online: false,
             input: None,
             called: "",
             net_handler: Cell::new(net_handler),
