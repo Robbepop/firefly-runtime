@@ -33,7 +33,6 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>, sudo: bool) -> Result<(), 
     linker.func_wrap("fs", "remove_file", fs::remove_file)?;
 
     linker.func_wrap("net", "get_me", net::get_me)?;
-    linker.func_wrap("net", "get_peer_count", net::get_peer_count)?;
     linker.func_wrap("net", "get_peers", net::get_peers)?;
 
     linker.func_wrap("misc", "log_debug", misc::log_debug)?;
