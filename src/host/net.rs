@@ -18,20 +18,6 @@ pub(crate) fn get_me(mut caller: C) -> u32 {
     unreachable!("list of peers has no local device")
 }
 
-/// Get the number how many peers are currently online.
-pub(crate) fn get_peer_count(mut caller: C) -> u32 {
-    let state = caller.data_mut();
-    state.called = "net.get_peer_count";
-    let handler = state.net_handler.get_mut();
-    let count = match handler {
-        NetHandler::None => 1,
-        NetHandler::Connector(c) => c.peer_infos().len() + 1,
-        NetHandler::Connection(c) => c.peers.len(),
-        NetHandler::FrameSyncer(c) => c.peers.len(),
-    };
-    count as u32
-}
-
 /// Get the map of peers that are currently online.
 pub(crate) fn get_peers(mut caller: C) -> u32 {
     let state = caller.data_mut();
