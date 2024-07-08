@@ -107,7 +107,31 @@ impl State {
     pub(crate) fn update(&mut self) -> Option<u8> {
         self.input = self.device.read_input();
         self.update_net();
-        let action = self.menu.handle_input(&self.input);
+
+        // Get combined input for all peers.
+        //
+        // In offline mode, it's just the input.
+        // For multi-player game, it is the combined input of all player.
+        // We use it to ensure that all players open the menu simultaneously.
+        let input = match self.net_handler.get_mut() {
+            NetHandler::None => self.input.clone(),
+            NetHandler::Connector(_) => return None,
+            NetHandler::Connection(_) => return None,
+            NetHandler::FrameSyncer(syncer) => {
+                // TODO: if menu is open, we need to adjust sync timeout
+                // for the frame syncer.
+                let mut input = InputState::default();
+                for peer in &syncer.peers {
+                    let state = peer.states.get_current();
+                    if let Some(state) = state {
+                        input = input.merge(&state.input.into());
+                    };
+                }
+                Some(input)
+            }
+        };
+
+        let action = self.menu.handle_input(&input);
         if let Some(action) = action {
             match action {
                 MenuItem::Custom(index, _) => return Some(*index),

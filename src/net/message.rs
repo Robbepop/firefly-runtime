@@ -2,6 +2,7 @@ use crate::config::FullID;
 use serde::{Deserialize, Serialize};
 
 use super::NetcodeError;
+use firefly_device::InputState;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Message {
@@ -104,4 +105,13 @@ pub(crate) struct FrameState {
 pub(crate) struct Input {
     pub pad: Option<(i16, i16)>,
     pub buttons: u8,
+}
+
+impl From<Input> for InputState {
+    fn from(value: Input) -> Self {
+        InputState {
+            pad: value.pad.map(Into::into),
+            buttons: value.buttons,
+        }
+    }
 }
