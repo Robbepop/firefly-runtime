@@ -13,4 +13,7 @@ pub(crate) mod sudo;
 pub(crate) mod wasip1;
 
 #[cfg(test)]
-pub(crate) mod graphics_tests;
+pub(crate) mod graphics_test;
+
+#[cfg(test)]
+pub(crate) mod misc_test;

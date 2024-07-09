@@ -1,0 +1,53 @@
+use crate::config::FullID;
+use crate::host::misc::*;
+use crate::state::{NetHandler, State};
+use firefly_device::DeviceImpl;
+use std::path::PathBuf;
+
+#[test]
+fn test_set_seed() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, set_seed);
+    let inputs = wrap_input(&[131415]);
+    let mut outputs = Vec::new();
+    func.call(&mut store, &inputs, &mut outputs).unwrap();
+    assert_eq!(outputs.len(), 0);
+    let state = store.data();
+    assert_eq!(state.seed, 131415)
+}
+
+#[test]
+fn test_get_random() {
+    let mut store = make_store();
+    let state = store.data_mut();
+    state.seed = 13;
+    let func = wasmi::Func::wrap(&mut store, get_random);
+    let mut outputs = wrap_input(&[0]);
+    func.call(&mut store, &[], &mut outputs).unwrap();
+    assert_eq!(outputs.len(), 1);
+    // Hardcoded value that might change if we change the random algorithm.
+    let expected = 3514797;
+    assert_eq!(outputs[0].i32(), Some(expected));
+    let state = store.data();
+    assert_eq!(state.seed, expected as u32)
+}
+
+fn wrap_input(a: &[i32]) -> Vec<wasmi::Val> {
+    let mut res = Vec::new();
+    for el in a {
+        res.push(wasmi::Val::I32(*el))
+    }
+    res
+}
+
+fn make_store() -> wasmi::Store<State> {
+    let engine = wasmi::Engine::default();
+    let root = PathBuf::from("/tmp");
+    let device = DeviceImpl::new(root);
+    let id = FullID::new(
+        "test-author".try_into().unwrap(),
+        "test-app".try_into().unwrap(),
+    );
+    let state = State::new(id, device, NetHandler::None);
+    wasmi::Store::new(&engine, state)
+}
