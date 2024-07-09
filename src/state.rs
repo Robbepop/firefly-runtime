@@ -2,10 +2,7 @@ use crate::config::FullID;
 use crate::error::Stats;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
-use crate::net::{
-    ConnectScene, ConnectStatus, Connection, ConnectionStatus, Connector, FrameState, FrameSyncer,
-    Input, MyInfo,
-};
+use crate::net::*;
 use crate::png::save_png;
 use core::cell::Cell;
 use core::fmt::Display;
@@ -53,6 +50,11 @@ pub(crate) struct State {
     /// The last called host function.
     pub called: &'static str,
 
+    /// The device name. Lazy loaded on demand.
+    ///
+    /// None if not cached. Empty string if not provided or invalid.
+    name: Option<heapless::String<16>>,
+
     pub net_handler: Cell<NetHandler>,
     pub connect_scene: Option<ConnectScene>,
 }
@@ -73,6 +75,7 @@ impl State {
             called: "",
             net_handler: Cell::new(net_handler),
             connect_scene: None,
+            name: None,
         }
     }
 
@@ -101,6 +104,18 @@ impl State {
                 }
             }
         };
+    }
+
+    pub(crate) fn get_name(&mut self) -> &str {
+        if self.name.is_none() {
+            let mut name = self.read_name().unwrap_or_default();
+            if firefly_meta::validate_id(&name).is_err() {
+                self.device.log_error("runtime", "device has invalid name");
+                name = heapless::String::new()
+            };
+            self.name = Some(name);
+        }
+        self.name.as_ref().unwrap()
     }
 
     /// Update the state: read inputs, handle system commands.
@@ -144,6 +159,7 @@ impl State {
         };
         None
     }
+
     fn update_net(&mut self) {
         let handler = self.net_handler.replace(NetHandler::None);
         let handler = match handler {
