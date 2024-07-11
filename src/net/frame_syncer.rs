@@ -35,6 +35,20 @@ impl FrameSyncer {
         true
     }
 
+    /// Get combined input of all peers.
+    ///
+    /// A button is considered pressed if any peer presses it.
+    pub fn get_combined_input(&self) -> InputState {
+        let mut input = InputState::default();
+        for peer in &self.peers {
+            let state = peer.states.get_current();
+            if let Some(state) = state {
+                input = input.merge(&state.input.into());
+            };
+        }
+        input
+    }
+
     pub fn update(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
         let now = device.now();
         if now - self.last_advance.unwrap() > FRAME_TIMEOUT {

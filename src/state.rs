@@ -140,14 +140,7 @@ impl State {
             NetHandler::FrameSyncer(syncer) => {
                 // TODO: if menu is open, we need to adjust sync timeout
                 // for the frame syncer.
-                let mut input = InputState::default();
-                for peer in &syncer.peers {
-                    let state = peer.states.get_current();
-                    if let Some(state) = state {
-                        input = input.merge(&state.input.into());
-                    };
-                }
-                Some(input)
+                Some(syncer.get_combined_input())
             }
         };
 
