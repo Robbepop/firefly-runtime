@@ -109,7 +109,7 @@ impl State {
     pub(crate) fn get_name(&mut self) -> &str {
         if self.name.is_none() {
             let mut name = self.read_name().unwrap_or_default();
-            if firefly_meta::validate_id(&name).is_err() {
+            if firefly_types::validate_id(&name).is_err() {
                 self.device.log_error("runtime", "device has invalid name");
                 name = heapless::String::new()
             };

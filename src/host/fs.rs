@@ -2,7 +2,7 @@ use crate::error::HostError;
 use crate::state::State;
 use embedded_io::{Read, Write};
 use firefly_device::Device;
-use firefly_meta::validate_path_part;
+use firefly_types::validate_path_part;
 
 type C<'a> = wasmi::Caller<'a, State>;
 

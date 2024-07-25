@@ -10,7 +10,7 @@ use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::pixelcolor::RgbColor;
 use embedded_io::Read;
 use firefly_device::*;
-use firefly_meta::{Meta, ShortMeta};
+use firefly_types::{Meta, ShortMeta};
 
 /// Default frames per second.
 const FPS: u32 = 60;
