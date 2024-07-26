@@ -279,8 +279,10 @@ where
     fn handle_serial(&mut self) -> Result<(), Error> {
         let maybe_msg = self.serial.recv().ok().unwrap();
         if let Some(raw_msg) = maybe_msg {
-            let req = serial::Request::decode(&raw_msg).unwrap();
-            self.handle_serial_request(req)?
+            match serial::Request::decode(&raw_msg) {
+                Ok(req) => self.handle_serial_request(req)?,
+                Err(err) => return Err(Error::SerialDecode(err)),
+            }
         }
         self.send_stats()?;
         Ok(())
