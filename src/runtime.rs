@@ -317,9 +317,8 @@ where
         let state = self.store.data();
         let now = state.device.now();
         if let Some(memory) = state.memory {
-            let pages = memory.current_pages(&self.store);
-            let pages: u32 = pages.into();
-            stats.pages = pages as u16;
+            let data = memory.data(&self.store);
+            stats.analyze_memory(data);
         }
         let Some(resp) = stats.as_message(now) else {
             return Ok(());

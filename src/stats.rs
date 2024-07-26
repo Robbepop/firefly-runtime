@@ -1,6 +1,8 @@
 use firefly_device::{Duration, Instant};
 use firefly_types::serial;
 
+const KB: usize = 1024;
+
 pub(crate) struct StatsTracker {
     pub frame: u32,
 
@@ -20,6 +22,7 @@ pub(crate) struct StatsTracker {
     pub lags: Duration,
 
     pub pages: u16,
+    pub last_one: u32,
 }
 
 impl StatsTracker {
@@ -32,6 +35,21 @@ impl StatsTracker {
             delays: Duration::from_ms(0),
             lags: Duration::from_ms(0),
             pages: 0,
+            last_one: 0,
+        }
+    }
+
+    pub fn analyze_memory(&mut self, data: &[u8]) {
+        let pages = data.len() / (64 * KB);
+        self.pages = pages as u16;
+        if self.frame % 120 != 10 {
+            return;
+        }
+        for (i, byte) in data.iter().rev().enumerate() {
+            if byte != &0 {
+                self.last_one = (data.len() - i) as u32;
+                return;
+            }
         }
     }
 
@@ -58,10 +76,10 @@ impl StatsTracker {
                 self.render_fuel.reset();
                 serial::Response::Fuel(serial::Callback::Render, fuel)
             }
-            9 => {
+            12 => {
                 let memory = serial::Memory {
                     pages: self.pages,
-                    last_one: 0,
+                    last_one: self.last_one,
                 };
                 serial::Response::Memory(memory)
             }
