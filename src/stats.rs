@@ -38,7 +38,13 @@ impl StatsTracker {
             return None;
         };
         let message = match self.frame % 120 {
-            3 => serial::Response::CPU(self.as_cpu(now)),
+            3 => {
+                let cpu = self.as_cpu(now);
+                self.delays = Duration::from_ms(0);
+                self.lags = Duration::from_ms(0);
+                self.synced = now;
+                serial::Response::CPU(cpu)
+            }
             5 => {
                 let fuel = self.update_fuel.as_fuel();
                 self.update_fuel.reset();
@@ -54,11 +60,10 @@ impl StatsTracker {
         Some(message)
     }
 
-    fn as_cpu(&mut self, now: Instant) -> serial::CPU {
+    fn as_cpu(&self, now: Instant) -> serial::CPU {
         let total = now - self.synced;
-        self.synced = now;
         serial::CPU {
-            busy_ns: self.lags.ns() + (total.ns() - self.delays.ns()),
+            busy_ns: self.lags.ns() + total.ns().saturating_sub(self.delays.ns()),
             lag_ns: self.lags.ns(),
             total_ns: total.ns(),
         }
