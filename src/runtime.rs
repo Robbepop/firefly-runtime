@@ -314,7 +314,13 @@ where
         let Some(stats) = &mut self.stats else {
             return Ok(());
         };
-        let now = self.store.data().device.now();
+        let state = self.store.data();
+        let now = state.device.now();
+        if let Some(memory) = state.memory {
+            let pages = memory.current_pages(&self.store);
+            let pages: u32 = pages.into();
+            stats.pages = pages as u16;
+        }
         let Some(resp) = stats.as_message(now) else {
             return Ok(());
         };

@@ -18,6 +18,8 @@ pub(crate) struct StatsTracker {
 
     /// Time lagging behind desired FPS because of updates.
     pub lags: Duration,
+
+    pub pages: u16,
 }
 
 impl StatsTracker {
@@ -29,6 +31,7 @@ impl StatsTracker {
             synced: now,
             delays: Duration::from_ms(0),
             lags: Duration::from_ms(0),
+            pages: 0,
         }
     }
 
@@ -54,6 +57,13 @@ impl StatsTracker {
                 let fuel = self.render_fuel.as_fuel();
                 self.render_fuel.reset();
                 serial::Response::Fuel(serial::Callback::Render, fuel)
+            }
+            9 => {
+                let memory = serial::Memory {
+                    pages: self.pages,
+                    last_one: 0,
+                };
+                serial::Response::Memory(memory)
             }
             _ => return None,
         };
