@@ -205,7 +205,7 @@ impl State {
     fn update_connection(&mut self, mut connection: Connection) -> NetHandler {
         let status = connection.update(&self.device);
         if matches!(status, ConnectionStatus::Launching) {
-            self.next = connection.app.clone();
+            self.next.clone_from(&connection.app);
             self.exit = true;
             let syncer = connection.finalize();
             return NetHandler::FrameSyncer(syncer);

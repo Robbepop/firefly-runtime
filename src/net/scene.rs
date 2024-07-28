@@ -107,7 +107,7 @@ impl ConnectScene {
     {
         let connector = state.net_handler.replace(NetHandler::None);
         let res = if let NetHandler::Connector(connector) = &connector {
-            self.render_inner(&connector, display)
+            self.render_inner(connector, display)
         } else {
             Ok(())
         };
