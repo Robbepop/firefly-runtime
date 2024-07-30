@@ -18,6 +18,7 @@ pub enum Error {
     SerialSend(firefly_device::NetworkError),
     SerialRecv(firefly_device::NetworkError),
     CheatUndefined,
+    CheatInNet,
 }
 
 impl fmt::Display for Error {
@@ -40,6 +41,7 @@ impl fmt::Display for Error {
             Error::SerialSend(err) => write!(f, "cannot send into serial port: {err}"),
             Error::SerialRecv(err) => write!(f, "cannot read from serial port: {err}"),
             Error::CheatUndefined => write!(f, "the app doesn't have cheat callback"),
+            Error::CheatInNet => write!(f, "cheats are disabled in multiplayer"),
         }
     }
 }

@@ -227,10 +227,8 @@ where
                 stats.delays += delay;
             }
             state.device.delay(delay);
-        } else {
-            if let Some(stats) = &mut self.stats {
-                stats.lags += elapsed - self.per_frame;
-            }
+        } else if let Some(stats) = &mut self.stats {
+            stats.lags += elapsed - self.per_frame;
         }
         self.prev_time = state.device.now();
     }
@@ -341,6 +339,10 @@ where
                 let Some(cheat) = self.cheat else {
                     return Err(Error::CheatUndefined);
                 };
+                let state = self.store.data_mut();
+                if !matches!(state.net_handler.get_mut(), NetHandler::None) {
+                    return Err(Error::CheatInNet);
+                }
                 match cheat.call(&mut self.store, (a, b)) {
                     Ok((result,)) => {
                         let resp = serial::Response::Cheat(result);

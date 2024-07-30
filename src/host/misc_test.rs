@@ -100,6 +100,5 @@ fn make_memory(store: &mut wasmi::Store<State>) -> wasmi::Memory {
 
 fn make_memory_inner(store: &mut wasmi::Store<State>) -> wasmi::Memory {
     let limits = wasmi::MemoryType::new(1, Some(1)).unwrap();
-    let memory = wasmi::Memory::new(store, limits).unwrap();
-    memory
+    wasmi::Memory::new(store, limits).unwrap()
 }

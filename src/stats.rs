@@ -167,7 +167,7 @@ mod tests {
     #[test]
     fn test_fuel() {
         let mut fuel = CallbackFuel::default();
-        for i in vec![2, 4, 4, 4, 5, 5, 7, 9] {
+        for i in [2, 4, 4, 4, 5, 5, 7, 9] {
             fuel.add(i);
         }
         let fuel: serial::Fuel = fuel.as_fuel();
