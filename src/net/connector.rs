@@ -145,7 +145,7 @@ impl Connector {
         let msg = Message::decode(&raw)?;
         match msg {
             Message::Req(req) => self.handle_req(device, addr, req),
-            Message::Resp(resp) => self.handle_resp(device, addr, resp),
+            Message::Resp(resp) => self.handle_resp(addr, resp),
         }
     }
 
@@ -161,31 +161,20 @@ impl Connector {
         Ok(())
     }
 
-    fn handle_resp(
-        &mut self,
-        device: &DeviceImpl,
-        addr: Addr,
-        resp: Resp,
-    ) -> Result<(), NetcodeError> {
+    fn handle_resp(&mut self, addr: Addr, resp: Resp) -> Result<(), NetcodeError> {
         if let Resp::Intro(intro) = resp {
-            self.handle_intro(device, addr, intro)?;
+            self.handle_intro(addr, intro)?;
         }
         Ok(())
     }
 
-    fn handle_intro(
-        &mut self,
-        device: &DeviceImpl,
-        addr: Addr,
-        intro: Intro,
-    ) -> Result<(), NetcodeError> {
+    fn handle_intro(&mut self, addr: Addr, intro: Intro) -> Result<(), NetcodeError> {
         for info in &self.peer_infos {
             if info.addr == addr {
                 return Ok(());
             }
         }
         // TODO: validate the name
-        device.log_debug("netcode", &intro.name);
         let info = PeerInfo {
             addr,
             name: intro.name,
