@@ -58,7 +58,7 @@ impl StatsTracker {
     }
 
     pub fn as_message(&mut self, now: Instant) -> Option<serial::Response> {
-        self.frame += 1;
+        self.frame = self.frame.wrapping_add(1);
         // Skip the first period, we don't have enough stats yet.
         if self.frame < FREQ {
             return None;
@@ -98,8 +98,9 @@ impl StatsTracker {
 
     fn as_cpu(&self, now: Instant) -> serial::CPU {
         let total = now - self.synced;
+        let busy = total.ns().saturating_sub(self.delays.ns());
         serial::CPU {
-            busy_ns: self.lags.ns() + total.ns().saturating_sub(self.delays.ns()),
+            busy_ns: self.lags.ns().saturating_add(busy),
             lag_ns: self.lags.ns(),
             total_ns: total.ns(),
         }
