@@ -6,6 +6,7 @@ use firefly_audio::*;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
+/// Add sine wave generator as a child for the given node.
 pub(crate) fn add_sine(mut caller: C, parent_id: u32, freq: f32, phase: f32) -> u32 {
     let state = caller.data_mut();
     state.called = "audio.add_sine";
@@ -21,6 +22,7 @@ pub(crate) fn add_sine(mut caller: C, parent_id: u32, freq: f32, phase: f32) -> 
     id
 }
 
+/// Reset the given node.
 pub(crate) fn reset(mut caller: C, node_id: u32) {
     let state = caller.data_mut();
     state.called = "audio.reset";
@@ -29,4 +31,15 @@ pub(crate) fn reset(mut caller: C, node_id: u32) {
         return;
     };
     node.reset();
+}
+
+/// Reset the given node and all its child nodes.
+pub(crate) fn reset_all(mut caller: C, node_id: u32) {
+    let state = caller.data_mut();
+    state.called = "audio.reset_all";
+    let Some(node) = state.audio.root.get_node(node_id) else {
+        state.log_error(HostError::UnknownNode(node_id));
+        return;
+    };
+    node.reset_all();
 }
