@@ -20,6 +20,7 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>, sudo: bool) -> Result<(), 
 
     linker.func_wrap("audio", "reset", audio::reset)?;
     linker.func_wrap("audio", "reset_all", audio::reset_all)?;
+    linker.func_wrap("audio", "clear", audio::clear)?;
     linker.func_wrap("audio", "add_sine", audio::add_sine)?;
 
     linker.func_wrap("input", "read_pad", input::read_pad)?;

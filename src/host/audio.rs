@@ -43,3 +43,14 @@ pub(crate) fn reset_all(mut caller: C, node_id: u32) {
     };
     node.reset_all();
 }
+
+/// Remove all children from the node.
+pub(crate) fn clear(mut caller: C, node_id: u32) {
+    let state = caller.data_mut();
+    state.called = "audio.clear";
+    let Some(node) = state.audio.root.get_node(node_id) else {
+        state.log_error(HostError::UnknownNode(node_id));
+        return;
+    };
+    node.clear();
+}
