@@ -2,7 +2,6 @@ use crate::error::HostError;
 use crate::state::State;
 use alloc::boxed::Box;
 use firefly_audio::*;
-// use firefly_device::*;
 
 type C<'a> = wasmi::Caller<'a, State>;
 

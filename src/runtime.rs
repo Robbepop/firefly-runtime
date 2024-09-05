@@ -172,6 +172,11 @@ where
         let state = self.store.data_mut();
         let menu_index = state.update();
 
+        let audio_buf = state.device.get_audio_buffer();
+        if !audio_buf.is_empty() {
+            state.audio.write(audio_buf);
+        }
+
         if let Some(scene) = &state.connect_scene {
             let res = scene.render(state, &mut self.display);
             if res.is_err() {
