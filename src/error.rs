@@ -86,8 +86,7 @@ pub(crate) enum HostError {
     TextUtf8,
     NoneColor,
     UnknownPeer(u32),
-    UnknownNode(u32),
-    TooManyNodes(u32),
+    AudioNode(firefly_audio::NodeError),
 }
 
 impl fmt::Display for HostError {
@@ -109,10 +108,7 @@ impl fmt::Display for HostError {
             HostError::TextUtf8 => write!(f, "text is not valid UTF-8"),
             HostError::NoneColor => write!(f, "color is None (0)"),
             HostError::UnknownPeer(p) => write!(f, "peer {p} is not connected"),
-            HostError::UnknownNode(id) => write!(f, "unknown node ID: {id}"),
-            HostError::TooManyNodes(id) => {
-                write!(f, "the node {id} already has too many child nodes")
-            }
+            HostError::AudioNode(err) => write!(f, "audio node error: {err}"),
         }
     }
 }
