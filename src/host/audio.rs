@@ -13,6 +13,14 @@ pub(crate) fn add_sine(mut caller: C, parent_id: u32, freq: f32, phase: f32) -> 
     add_node(state, parent_id, Box::new(proc))
 }
 
+/// Add gain filter as a child for the given node.
+pub(crate) fn add_gain(mut caller: C, parent_id: u32, lvl: f32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_gain";
+    let proc = Gain::new(lvl);
+    add_node(state, parent_id, Box::new(proc))
+}
+
 /// Add square wave generator as a child for the given node.
 pub(crate) fn add_square(mut caller: C, parent_id: u32, freq: f32, phase: f32) -> u32 {
     let state = caller.data_mut();
@@ -29,6 +37,37 @@ fn add_node(state: &mut State, parent_id: u32, proc: Box<dyn firefly_audio::Proc
             0
         }
     }
+}
+
+/// Modulate a parameter of the given node using linear modulation.
+pub(crate) fn mod_linear(
+    mut caller: C,
+    node_id: u32,
+    param: u32,
+    start: f32,
+    end: f32,
+    start_at: u32,
+    end_at: u32,
+) {
+    let state = caller.data_mut();
+    state.called = "audio.mod_linear";
+    let lfo = lfo::Linear::new(start, end, start_at, end_at);
+    modulate(state, node_id, param, Box::new(lfo));
+}
+
+fn modulate(state: &mut State, node_id: u32, param: u32, lfo: Box<dyn lfo::LFO>) {
+    let node = match state.audio.get_node(node_id) {
+        Ok(node) => node,
+        Err(err) => {
+            state.log_error(HostError::AudioNode(err));
+            return;
+        }
+    };
+    if param > 8 {
+        state.log_error("param value is too high");
+        return;
+    }
+    node.modulate(param as u8, lfo);
 }
 
 /// Reset the given node.
