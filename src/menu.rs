@@ -70,6 +70,7 @@ impl Menu {
         }
         _ = items.push(MenuItem::ScreenShot);
         _ = items.push(MenuItem::Restart);
+        // TODO: hide it in launcher
         _ = items.push(MenuItem::Quit);
         Self {
             app_items: alloc::vec::Vec::new(),
