@@ -61,11 +61,123 @@ pub(crate) fn add_zero(mut caller: C, parent_id: u32) -> u32 {
     add_node(state, parent_id, Box::new(proc))
 }
 
-/// Add gain filter as a child for the given node.
+/// Add Mix filter as a child for the given node.
+pub(crate) fn add_mix(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_mix";
+    let proc = Mix::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add AllForOne filter as a child for the given node.
+pub(crate) fn add_all_for_one(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_all_for_one";
+    let proc = AllForOne::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add Gain filter as a child for the given node.
 pub(crate) fn add_gain(mut caller: C, parent_id: u32, lvl: f32) -> u32 {
     let state = caller.data_mut();
     state.called = "audio.add_gain";
     let proc = Gain::new(lvl);
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add Loop filter as a child for the given node.
+pub(crate) fn add_loop(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_loop";
+    let proc = Loop::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add Concat filter as a child for the given node.
+pub(crate) fn add_concat(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_concat";
+    let proc = Concat::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add Pan filter as a child for the given node.
+pub(crate) fn add_pan(mut caller: C, parent_id: u32, lvl: f32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_pan";
+    let proc = Pan::new(lvl);
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add Mute filter as a child for the given node.
+pub(crate) fn add_mute(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_mute";
+    let proc = Mute::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add Pause filter as a child for the given node.
+pub(crate) fn add_pause(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_pause";
+    let proc = Pause::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add TrackPosition filter as a child for the given node.
+pub(crate) fn add_track_position(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_track_position";
+    let proc = TrackPosition::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add LowHighPass filter as a child for the given node.
+pub(crate) fn add_low_pass(mut caller: C, parent_id: u32, freq: f32, q: f32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_low_pass";
+    let proc = LowHighPass::new(true, freq, q);
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add LowHighPass filter as a child for the given node.
+pub(crate) fn add_high_pass(mut caller: C, parent_id: u32, freq: f32, q: f32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_high_pass";
+    let proc = LowHighPass::new(false, freq, q);
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add TakeLeft filter as a child for the given node.
+pub(crate) fn add_take_left(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_take_left";
+    let proc = TakeLeft::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add TakeRight filter as a child for the given node.
+pub(crate) fn add_take_right(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_take_right";
+    let proc = TakeRight::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add Swap filter as a child for the given node.
+pub(crate) fn add_swap(mut caller: C, parent_id: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_swap";
+    let proc = Swap::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add Clip filter as a child for the given node.
+pub(crate) fn add_clip(mut caller: C, parent_id: u32, low: f32, high: f32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_clip";
+    let proc = Clip::new(low, high);
     add_node(state, parent_id, Box::new(proc))
 }
 
