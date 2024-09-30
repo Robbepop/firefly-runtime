@@ -127,8 +127,8 @@ where
         Ok(runtime)
     }
 
-    pub fn display(&self) -> &D {
-        &self.display
+    pub fn display(&mut self) -> &mut D {
+        &mut self.display
     }
 
     /// Run the app until exited or an error occurs.
