@@ -54,8 +54,8 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>, sudo: bool) -> Result<(), 
     linker.func_wrap("menu", "remove_menu_item", menu::remove_menu_item)?;
     linker.func_wrap("menu", "open_menu", menu::open_menu)?;
 
-    linker.func_wrap("fs", "get_rom_file_size", fs::get_rom_file_size)?;
-    linker.func_wrap("fs", "load_rom_file", fs::load_rom_file)?;
+    linker.func_wrap("fs", "get_rom_file_size", fs::get_rom_file_size)?; // deprecated
+    linker.func_wrap("fs", "load_rom_file", fs::load_rom_file)?; // deprecated
     linker.func_wrap("fs", "get_file_size", fs::get_file_size)?;
     linker.func_wrap("fs", "load_file", fs::load_file)?;
     linker.func_wrap("fs", "dump_file", fs::dump_file)?;

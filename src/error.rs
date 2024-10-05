@@ -74,6 +74,7 @@ pub(crate) enum HostError {
     OomPointer,
     BufferSize,
     FileNotFound,
+    FileReadOnly,
     FileRead,
     FileCreate,
     FileRemove,
@@ -94,6 +95,7 @@ impl fmt::Display for HostError {
         match self {
             HostError::MemoryNotFound => write!(f, "memory not found"),
             HostError::FileNotFound => write!(f, "file not found"),
+            HostError::FileReadOnly => write!(f, "files in the app ROM cannot be modified"),
             HostError::OomPointer => write!(f, "buffer points out of memory"),
             HostError::FileRead => write!(f, "cannot read file"),
             HostError::FileCreate => write!(f, "cannot create file"),

@@ -6,23 +6,22 @@ use firefly_types::validate_path_part;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
-/// Get file size in bytes for a file in the app ROM.
-///
-/// It is used by the apps to allocate the buffer for loading the file.
+/// DEPRECATED
 pub(crate) fn get_rom_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
     let state = caller.data_mut();
-    state.called = "fs.get_rom_file_size";
-    get_file_size_inner(caller, true, path_ptr, path_len)
+    state.log_error("get_rom_file_size is deprecated");
+    get_file_size(caller, path_ptr, path_len)
 }
 
+/// Get file size in bytes for a file.
+///
+/// It is used by the apps to allocate the buffer for loading the file.
+///
+/// It will first lookup file in the app's ROM directory and then check
+/// the app writable data directory.
 pub(crate) fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
     let state = caller.data_mut();
     state.called = "fs.get_file_size";
-    get_file_size_inner(caller, false, path_ptr, path_len)
-}
-
-pub fn get_file_size_inner(mut caller: C, rom: bool, path_ptr: u32, path_len: u32) -> u32 {
-    let state = caller.data_mut();
     let Some(memory) = state.memory else {
         state.log_error(HostError::MemoryNotFound);
         return 0;
@@ -31,15 +30,15 @@ pub fn get_file_size_inner(mut caller: C, rom: bool, path_ptr: u32, path_len: u3
     let Some(name) = get_file_name(state, data, path_ptr, path_len) else {
         return 0;
     };
-    let path: &[&str] = if rom {
-        &["roms", state.id.author(), state.id.app(), name]
-    } else {
-        &["data", state.id.author(), state.id.app(), "etc", name]
-    };
+    let path = &["roms", state.id.author(), state.id.app(), name];
+    if let Some(size) = state.device.get_file_size(path) {
+        return size;
+    }
+    let path = &["data", state.id.author(), state.id.app(), "etc", name];
     state.device.get_file_size(path).unwrap_or(0)
 }
 
-/// Read contents of the file from the app ROM and write them into the buffer.
+/// DEPRECATED
 pub(crate) fn load_rom_file(
     mut caller: C,
     path_ptr: u32,
@@ -48,11 +47,14 @@ pub(crate) fn load_rom_file(
     buf_len: u32,
 ) -> u32 {
     let state = caller.data_mut();
-    state.called = "fs.load_rom_file";
-    load_file_inner(caller, true, path_ptr, path_len, buf_ptr, buf_len)
+    state.log_error("get_rom_file_size is deprecated");
+    load_file(caller, path_ptr, path_len, buf_ptr, buf_len)
 }
 
-/// Read contents of the file from the app data dir and write them into the buffer.
+/// Read contents of the file and write them into the buffer.
+///
+/// It will first lookup file in the app's ROM directory and then check
+/// the app writable data directory.
 pub(crate) fn load_file(
     mut caller: C,
     path_ptr: u32,
@@ -62,18 +64,6 @@ pub(crate) fn load_file(
 ) -> u32 {
     let state = caller.data_mut();
     state.called = "fs.load_file";
-    load_file_inner(caller, false, path_ptr, path_len, buf_ptr, buf_len)
-}
-
-fn load_file_inner(
-    mut caller: C,
-    rom: bool,
-    path_ptr: u32,
-    path_len: u32,
-    buf_ptr: u32,
-    buf_len: u32,
-) -> u32 {
-    let state = caller.data_mut();
     let Some(memory) = state.memory else {
         state.log_error(HostError::MemoryNotFound);
         return 0;
@@ -83,14 +73,17 @@ fn load_file_inner(
         return 0;
     };
 
-    let path: &[&str] = if rom {
-        &["roms", state.id.author(), state.id.app(), name]
-    } else {
-        &["data", state.id.author(), state.id.app(), "etc", name]
-    };
-    let Some(mut file) = state.device.open_file(path) else {
-        state.log_error(HostError::FileNotFound);
-        return 0;
+    let path = &["roms", state.id.author(), state.id.app(), name];
+    let mut file = match state.device.open_file(path) {
+        Some(file) => file,
+        None => {
+            let path = &["data", state.id.author(), state.id.app(), "etc", name];
+            let Some(file) = state.device.open_file(path) else {
+                state.log_error(HostError::FileNotFound);
+                return 0;
+            };
+            file
+        }
     };
     let buf_ptr = buf_ptr as usize;
     let buf_len = buf_len as usize;
@@ -110,6 +103,8 @@ fn load_file_inner(
 }
 
 /// Create file in data dir and write into it the contents of the buffer.
+///
+/// Return how many bytes were written.
 pub(crate) fn dump_file(
     mut caller: C,
     path_ptr: u32,
@@ -127,6 +122,13 @@ pub(crate) fn dump_file(
     let Some(name) = get_file_name(state, data, path_ptr, path_len) else {
         return 0;
     };
+
+    // reject writing into files that are already present in ROM to avoid shadowing
+    let path = &["roms", state.id.author(), state.id.app(), name];
+    if state.device.get_file_size(path).is_some() {
+        state.log_error(HostError::FileReadOnly);
+        return 0;
+    }
 
     let path = &["data", state.id.author(), state.id.app(), "etc", name];
     let Some(mut file) = state.device.create_file(path) else {
@@ -165,6 +167,13 @@ pub(crate) fn remove_file(mut caller: C, path_ptr: u32, path_len: u32) {
     let Some(name) = get_file_name(state, data, path_ptr, path_len) else {
         return;
     };
+
+    // reject removing files that are already present in ROM to avoid shadowing
+    let path = &["roms", state.id.author(), state.id.app(), name];
+    if state.device.get_file_size(path).is_some() {
+        state.log_error(HostError::FileReadOnly);
+        return;
+    }
 
     let path = &["data", state.id.author(), state.id.app(), "etc", name];
     let ok = state.device.remove_file(path);
