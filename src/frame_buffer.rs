@@ -20,6 +20,7 @@ pub(crate) struct FrameBuffer {
     pub(crate) data: Box<[u8; BUFFER_SIZE]>,
     /// The color palette. Maps 16-color packed pixels to RGB colors.
     pub(crate) palette: [Rgb888; 16],
+    dirty: bool,
 }
 
 impl FrameBuffer {
@@ -46,6 +47,7 @@ impl FrameBuffer {
                 Rgb888::new(0x56, 0x6c, 0x86), // gray
                 Rgb888::new(0x33, 0x3c, 0x57), // dark gray
             ],
+            dirty: false,
         }
     }
 }
@@ -73,6 +75,7 @@ impl DrawTarget for FrameBuffer {
     }
 
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+        self.dirty = true;
         let new_byte = color_to_byte(&color);
         self.data.fill(new_byte);
         Ok(())
@@ -103,6 +106,10 @@ impl FrameBuffer {
         C: RgbColor + FromRGB,
         D: DrawTarget<Color = C, Error = E>,
     {
+        if !self.dirty {
+            return Ok(());
+        }
+        self.dirty = false;
         // If the range is empty, don't update the screen.
         if min_y > max_y {
             return Ok(());
@@ -125,6 +132,7 @@ impl FrameBuffer {
 
     /// Set color of a single pixel at the given coordinates.
     fn set_pixel(&mut self, pixel: Pixel<Gray4>) {
+        self.dirty = true;
         let Pixel(point, color) = pixel;
         let x = point.x as usize;
         let y = point.y as usize;
