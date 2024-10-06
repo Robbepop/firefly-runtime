@@ -72,7 +72,13 @@ pub(crate) fn draw_line(
         return;
     };
     let style = PrimitiveStyle::with_stroke(color, stroke_width);
-    never_fails(line.draw_styled(&style, &mut state.frame));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        line.draw_styled(&style, &mut target)
+    } else {
+        line.draw_styled(&style, &mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw a rectangle.

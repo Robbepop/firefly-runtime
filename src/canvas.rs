@@ -1,10 +1,20 @@
-use embedded_graphics::{image::ImageRawLE, pixelcolor::Gray4};
+use core::convert::Infallible;
+
+use embedded_graphics::image::ImageRawLE;
+use embedded_graphics::pixelcolor::Gray4;
+use embedded_graphics::prelude::{DrawTarget, IntoStorage, OriginDimensions, Size};
+use embedded_graphics::Pixel;
+
+use crate::state::State;
+
+const PPB: usize = 2;
 
 /// A draw target backed by the guest memory.
+#[derive(Clone)]
 pub struct Canvas {
     start: usize,
     end: usize,
-    width: u32,
+    width: usize,
 }
 
 impl Canvas {
@@ -12,12 +22,79 @@ impl Canvas {
         Self {
             start: start as usize,
             end: (start + size) as usize,
-            width,
+            width: width as usize,
         }
     }
 
     pub fn as_image<'a>(&self, memory: &'a [u8]) -> ImageRawLE<'a, Gray4> {
         let data = &memory[self.start..self.end];
-        ImageRawLE::new(data, self.width)
+        ImageRawLE::new(data, self.width as u32)
+    }
+
+    pub fn as_target<'a>(&self, caller: &'a mut wasmi::Caller<'_, State>) -> CanvasBuffer<'a> {
+        let state = caller.data();
+        // safety: memory presence is ensured in set_canvas
+        let memory = state.memory.unwrap();
+        let memory = memory.data_mut(caller);
+        let data = &mut memory[self.start..self.end];
+        let height = data.len() * 2 / self.width;
+        CanvasBuffer {
+            data,
+            width: self.width,
+            height,
+        }
+    }
+}
+
+pub struct CanvasBuffer<'a> {
+    data: &'a mut [u8],
+    width: usize,
+    height: usize,
+}
+
+impl<'a> OriginDimensions for CanvasBuffer<'a> {
+    fn size(&self) -> Size {
+        Size {
+            width: self.width as u32,
+            height: self.height as u32,
+        }
+    }
+}
+
+impl<'a> DrawTarget for CanvasBuffer<'a> {
+    type Color = Gray4;
+    type Error = Infallible;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        for pixel in pixels {
+            self.set_pixel(pixel)
+        }
+        Ok(())
+    }
+}
+
+impl<'a> CanvasBuffer<'a> {
+    fn set_pixel(&mut self, pixel: Pixel<Gray4>) {
+        let Pixel(point, color) = pixel;
+        let x = point.x as usize;
+        let y = point.y as usize;
+        if y >= self.height || x >= self.width {
+            return; // the pixel is out of bounds
+        }
+        let pixel_index = y * self.width + x;
+        let byte_index = pixel_index / PPB;
+        let shift = if pixel_index % 2 == 0 { 0 } else { 4 };
+        let mask = !(0b1111 << shift);
+        let byte = self.data[byte_index];
+        let color = color.into_storage();
+        debug_assert!(color < 16);
+        let new_byte = (color << shift) | (byte & mask);
+        if new_byte == byte {
+            return;
+        }
+        self.data[byte_index] = new_byte
     }
 }
