@@ -110,7 +110,13 @@ pub(crate) fn draw_rect(
     let size = Size::new(width, height);
     let rect = Rectangle::new(point, size);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
-    never_fails(rect.draw_styled(&style, &mut state.frame));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        rect.draw_styled(&style, &mut target)
+    } else {
+        rect.draw_styled(&style, &mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw a rectangle with rounded corners.
@@ -134,7 +140,13 @@ pub(crate) fn draw_rounded_rect(
     let corner = Size::new(corner_width, corner_height);
     let rounded = RoundedRectangle::with_equal_corners(rect, corner);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
-    never_fails(rounded.draw_styled(&style, &mut state.frame));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        rounded.draw_styled(&style, &mut target)
+    } else {
+        rounded.draw_styled(&style, &mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw a circle.
@@ -152,7 +164,13 @@ pub(crate) fn draw_circle(
     let top_left = Point::new(x, y);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
     let circle = Circle::new(top_left, diameter);
-    never_fails(circle.draw_styled(&style, &mut state.frame));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        circle.draw_styled(&style, &mut target)
+    } else {
+        circle.draw_styled(&style, &mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw an ellipse.
@@ -172,7 +190,13 @@ pub(crate) fn draw_ellipse(
     let size = Size::new(width, height);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
     let ellipse = Ellipse::new(top_left, size);
-    never_fails(ellipse.draw_styled(&style, &mut state.frame));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        ellipse.draw_styled(&style, &mut target)
+    } else {
+        ellipse.draw_styled(&style, &mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw a line between two points.
@@ -195,7 +219,13 @@ pub(crate) fn draw_triangle(
     let vertex3 = Point::new(p3_x, p3_y);
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
     let triangle = Triangle::new(vertex1, vertex2, vertex3);
-    never_fails(triangle.draw_styled(&style, &mut state.frame));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        triangle.draw_styled(&style, &mut target)
+    } else {
+        triangle.draw_styled(&style, &mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw an arc.
@@ -217,7 +247,13 @@ pub(crate) fn draw_arc(
     let angle_sweep = Angle::from_radians(angle_sweep.into());
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
     let arc = Arc::new(point, diameter, angle_start, angle_sweep);
-    never_fails(arc.draw_styled(&style, &mut state.frame));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        arc.draw_styled(&style, &mut target)
+    } else {
+        arc.draw_styled(&style, &mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw a sector.
@@ -238,8 +274,14 @@ pub(crate) fn draw_sector(
     let angle_start = Angle::from_radians(angle_start.into());
     let angle_sweep = Angle::from_radians(angle_sweep.into());
     let style = get_shape_style(fill_color, stroke_color, stroke_width);
-    let arc = Sector::new(point, diameter, angle_start, angle_sweep);
-    never_fails(arc.draw_styled(&style, &mut state.frame));
+    let sector = Sector::new(point, diameter, angle_start, angle_sweep);
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        sector.draw_styled(&style, &mut target)
+    } else {
+        sector.draw_styled(&style, &mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw a text message using the given font.
@@ -310,6 +352,7 @@ pub(crate) fn draw_text(
         return;
     };
     let text = Text::new(text, point, style);
+    // TODO: support canvas
     never_fails(text.draw(&mut state.frame));
 }
 
@@ -430,6 +473,7 @@ fn draw_image_inner(mut caller: C, ptr: u32, len: u32, x: i32, y: i32, sub: Opti
         return;
     }
 
+    // TODO: support canvas
     let point = Point::new(x, y);
     match bpp {
         1 => {
