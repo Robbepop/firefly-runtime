@@ -24,7 +24,13 @@ pub(crate) fn clear_screen(mut caller: C, color: i32) {
         state.log_error(HostError::NoneColor);
         return;
     };
-    never_fails(state.frame.clear(color));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        target.clear(color)
+    } else {
+        state.frame.clear(color)
+    };
+    never_fails(err);
 }
 
 /// Set the given palette color.
@@ -49,7 +55,13 @@ pub(crate) fn draw_point(mut caller: C, x: i32, y: i32, color: i32) {
         return;
     };
     let pixel = Pixel(point, color);
-    never_fails(pixel.draw(&mut state.frame));
+    let err = if let Some(canvas) = &state.canvas {
+        let mut target = canvas.clone().as_target(&mut caller);
+        pixel.draw(&mut target)
+    } else {
+        pixel.draw(&mut state.frame)
+    };
+    never_fails(err);
 }
 
 /// Draw a line between two points.
@@ -324,17 +336,17 @@ pub(crate) fn set_canvas(mut caller: C, ptr: u32, len: u32) {
         state.log_error(Error::InvalidWidth);
         return;
     }
-    let canvas = Canvas::new(ptr, len, width);
+    let canvas = Canvas::new(ptr + HEADER as u32, len - HEADER as u32, width);
     state.canvas = Some(canvas)
 }
 
-pub(crate) fn drop_canvas(mut caller: C) {
+pub(crate) fn unset_canvas(mut caller: C) {
     let state = caller.data_mut();
     state.called = "graphics.drop_canvas";
     state.canvas = None;
 }
 
-pub(crate) fn draw_canvas(mut caller: C) {
+pub(crate) fn draw_canvas(mut caller: C, x: i32, y: i32) {
     let state = caller.data_mut();
     state.called = "graphics.draw_canvas";
     let Some(canvas) = &mut state.canvas else {
@@ -346,7 +358,9 @@ pub(crate) fn draw_canvas(mut caller: C) {
     // safety: memory presence is ensured in set_canvas
     let memory = state.memory.unwrap();
     let (memory, state) = memory.data_and_store_mut(&mut caller);
-    let image = canvas.as_image(memory);
+    let raw_image = canvas.as_image(memory);
+    let point = Point { x, y };
+    let image = Image::new(&raw_image, point);
     never_fails(image.draw(&mut state.frame));
 }
 

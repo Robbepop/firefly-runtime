@@ -10,13 +10,11 @@ use core::fmt::Display;
 use embedded_io::Read;
 use firefly_device::*;
 
+#[allow(private_interfaces)]
 pub enum NetHandler {
     None,
-    #[allow(private_interfaces)]
     Connector(Connector),
-    #[allow(private_interfaces)]
     Connection(Connection),
-    #[allow(private_interfaces)]
     FrameSyncer(FrameSyncer),
 }
 
