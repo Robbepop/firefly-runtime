@@ -401,10 +401,8 @@ pub(crate) fn draw_canvas(mut caller: C, x: i32, y: i32) {
     // safety: memory presence is ensured in set_canvas
     let memory = state.memory.unwrap();
     let (memory, state) = memory.data_and_store_mut(&mut caller);
-    let raw_image = canvas.as_image(memory);
     let point = Point { x, y };
-    let image = Image::new(&raw_image, point);
-    never_fails(image.draw(&mut state.frame));
+    never_fails(canvas.draw_at(memory, point, &mut state.frame));
 }
 
 pub(crate) fn draw_sub_image(

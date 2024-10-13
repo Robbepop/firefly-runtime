@@ -1,8 +1,8 @@
 use core::convert::Infallible;
 
-use embedded_graphics::image::ImageRawLE;
 use embedded_graphics::pixelcolor::Gray4;
-use embedded_graphics::prelude::{DrawTarget, IntoStorage, OriginDimensions, Size};
+use embedded_graphics::prelude::*;
+use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Pixel;
 
 use crate::state::State;
@@ -26,11 +26,27 @@ impl Canvas {
         }
     }
 
-    pub fn as_image<'a>(&self, memory: &'a [u8]) -> ImageRawLE<'a, Gray4> {
+    /// Draw the contents of the canvas onto the target at the given position.
+    pub fn draw_at<D>(&self, memory: &[u8], point: Point, target: &mut D) -> Result<(), D::Error>
+    where
+        D: DrawTarget<Color = Gray4>,
+    {
         let data = &memory[self.start..self.end];
-        ImageRawLE::new(data, self.width as u32)
+        let colors = CanvasIter {
+            data,
+            idx: 0,
+            second: false,
+        };
+        let height = data.len() * 2 / self.width;
+        let size = Size {
+            width: self.width as u32,
+            height: height as u32,
+        };
+        let area = Rectangle::new(point, size);
+        target.fill_contiguous(&area, colors)
     }
 
+    /// Make a draw target that modifies the data inside the canvas.
     pub fn as_target<'a>(&self, caller: &'a mut wasmi::Caller<'_, State>) -> CanvasBuffer<'a> {
         let state = caller.data();
         // safety: memory presence is ensured in set_canvas
@@ -46,6 +62,33 @@ impl Canvas {
     }
 }
 
+/// A continious iterator over all colors in the canvas.
+pub struct CanvasIter<'a> {
+    data: &'a [u8],
+    idx: usize,
+    second: bool,
+}
+
+impl<'a> Iterator for CanvasIter<'a> {
+    type Item = Gray4;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let byte = self.data.get(self.idx)?;
+        let luma: u8 = if self.second {
+            self.idx += 1;
+            byte >> 4
+        } else {
+            *byte
+        };
+        let luma = luma & 0b1111;
+        self.second = !self.second;
+        Some(Gray4::new(luma))
+    }
+}
+
+/// A wrapper for drawing onto the canvas.
+///
+/// It works just like the frame buffer but the width and height are defined at runtime.
 pub struct CanvasBuffer<'a> {
     data: &'a mut [u8],
     width: usize,
