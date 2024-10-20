@@ -2,6 +2,9 @@ use crate::error::HostError;
 use crate::state::State;
 use alloc::boxed::Box;
 use firefly_audio::*;
+use firefly_device::Device;
+
+use super::fs::get_file_name;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
@@ -58,6 +61,33 @@ pub(crate) fn add_zero(mut caller: C, parent_id: u32) -> u32 {
     let state = caller.data_mut();
     state.called = "audio.add_zero";
     let proc = Zero::new();
+    add_node(state, parent_id, Box::new(proc))
+}
+
+/// Add PCM file source as a child for the given node.
+pub(crate) fn add_file(mut caller: C, parent_id: u32, ptr: u32, len: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "audio.add_file";
+    let Some(memory) = state.memory else {
+        state.log_error(HostError::MemoryNotFound);
+        return 0;
+    };
+    let (data, state) = memory.data_and_store_mut(&mut caller);
+    let Some(name) = get_file_name(state, data, ptr, len) else {
+        return 0;
+    };
+    let path = &["roms", state.id.author(), state.id.app(), name];
+    let Some(reader) = state.device.open_file(path) else {
+        state.log_error("cannot open audio file");
+        return 0;
+    };
+    let proc = match Pcm::from_file(reader) {
+        Ok(proc) => proc,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
+    };
     add_node(state, parent_id, Box::new(proc))
 }
 

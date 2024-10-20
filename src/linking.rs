@@ -24,6 +24,7 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>, sudo: bool) -> Result<(), 
     linker.func_wrap("audio", "reset_all", audio::reset_all)?;
     linker.func_wrap("audio", "clear", audio::clear)?;
     linker.func_wrap("audio", "add_empty", audio::add_empty)?;
+    linker.func_wrap("audio", "add_file", audio::add_file)?;
     linker.func_wrap("audio", "add_mix", audio::add_mix)?;
     linker.func_wrap("audio", "add_all_for_one", audio::add_all_for_one)?;
     linker.func_wrap("audio", "add_gain", audio::add_gain)?;
