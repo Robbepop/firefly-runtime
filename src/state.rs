@@ -238,7 +238,7 @@ impl State {
         if matches!(status, ConnectionStatus::Launching) {
             self.next.clone_from(&connection.app);
             self.exit = true;
-            let syncer = connection.finalize();
+            let syncer = connection.finalize(&self.device);
             return NetHandler::FrameSyncer(syncer);
         }
         NetHandler::Connection(connection)

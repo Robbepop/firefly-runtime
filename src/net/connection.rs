@@ -1,6 +1,7 @@
 use crate::FullID;
 
 use super::*;
+use embedded_io::Read;
 use firefly_device::*;
 use ring::RingBuf;
 
@@ -72,13 +73,15 @@ impl Connection {
         Ok(())
     }
 
-    pub(crate) fn finalize(self) -> FrameSyncer {
+    pub(crate) fn finalize(self, device: &DeviceImpl) -> FrameSyncer {
         let mut peers = heapless::Vec::<FSPeer, 8>::new();
         for peer in self.peers {
+            let friend_id = get_friend_id(device, peer.name.as_str());
             let peer = FSPeer {
                 addr: peer.addr,
                 name: peer.name,
                 states: RingBuf::new(),
+                friend_id,
             };
             peers.push(peer).ok().unwrap();
         }
@@ -188,4 +191,33 @@ impl Connection {
         }
         None
     }
+}
+
+fn get_friend_id(device: &DeviceImpl, device_name: &str) -> u32 {
+    let path = &["sys", "friends"];
+    let Some(mut stream) = device.open_file(path) else {
+        // TODO: create file
+        return 0;
+    };
+    let device_name = device_name.as_bytes();
+
+    // check if the device name is already in the list of friends
+    let mut buf = [0u8; 17];
+    for i in 0.. {
+        let res = stream.read(&mut buf[..1]);
+        if res.is_err() {
+            break;
+        }
+        let size = usize::from(buf[0]);
+        let res = stream.read(&mut buf[1..=size]);
+        if res.is_err() {
+            break;
+        }
+        if &buf[1..=size] == device_name {
+            return i;
+        }
+    }
+
+    // TODO: append
+    0
 }

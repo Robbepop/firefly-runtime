@@ -12,6 +12,7 @@ pub(crate) struct FSPeer {
     /// If address is None, the peer is the current device.
     pub addr: Option<Addr>,
     pub name: heapless::String<16>,
+    pub friend_id: u32,
     pub states: RingBuf<FrameState>,
 }
 
