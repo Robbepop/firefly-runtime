@@ -2,26 +2,6 @@ use crate::{error::HostError, state::NetHandler, state::State};
 
 type C<'a> = wasmi::Caller<'a, State>;
 
-pub(crate) fn get_progress(mut caller: C, id: u32) -> u32 {
-    let state = caller.data_mut();
-    state.called = "stats.get_progress";
-    let Some(stats) = &mut state.app_stats else {
-        state.log_error(HostError::NoStats);
-        return 0;
-    };
-    let idx = (id - 1) as usize;
-    let Some(progress) = stats.badges.get(idx) else {
-        let err = if stats.badges.is_empty() {
-            HostError::NoBadges
-        } else {
-            HostError::NoBadge(id)
-        };
-        state.log_error(err);
-        return 0;
-    };
-    u32::from(progress.done) << 16 | u32::from(progress.goal)
-}
-
 pub(crate) fn add_progress(mut caller: C, id: u32, val: i32) -> u32 {
     let state = caller.data_mut();
     state.called = "stats.add_progress";
@@ -58,7 +38,7 @@ pub(crate) fn add_progress(mut caller: C, id: u32, val: i32) -> u32 {
     u32::from(progress.done) << 16 | u32::from(progress.goal)
 }
 
-pub(crate) fn set_score(mut caller: C, board_id: u32, peer_id: u32, new_score: u32) -> u32 {
+pub(crate) fn add_score(mut caller: C, board_id: u32, peer_id: u32, new_score: u32) -> u32 {
     let state = caller.data_mut();
     state.called = "stats.set_score";
     let Some(stats) = &mut state.app_stats else {
@@ -96,12 +76,6 @@ pub(crate) fn set_score(mut caller: C, board_id: u32, peer_id: u32, new_score: u
         // insert_score(&mut scores.friends, new_score);
     };
     u32::from(personal_best)
-}
-
-pub(crate) fn get_top_score(mut caller: C, board_id: u32, peer_id: u32) -> u32 {
-    let state = caller.data_mut();
-    state.called = "stats.get_top_score";
-    todo!()
 }
 
 fn insert_my_score(scores: &mut [u16; 8], new_score: u16) {
