@@ -3,7 +3,7 @@ use firefly_types::FriendScore;
 
 type C<'a> = wasmi::Caller<'a, State>;
 
-pub(crate) fn add_progress(mut caller: C, id: u32, val: i32) -> u32 {
+pub(crate) fn add_progress(mut caller: C, peer_id: u32, badge_id: u32, val: i32) -> u32 {
     let state = caller.data_mut();
     state.called = "stats.add_progress";
 
@@ -11,12 +11,21 @@ pub(crate) fn add_progress(mut caller: C, id: u32, val: i32) -> u32 {
         state.log_error(HostError::NoStats);
         return 0;
     };
-    let idx = (id - 1) as usize;
+
+    // We currently add progress only for the local player.
+    // Each device stores its own progress.
+    let handler = state.net_handler.get_mut();
+    let friend_id = get_friend_id(handler, peer_id);
+    if friend_id.is_some() {
+        return 0;
+    }
+
+    let idx = (badge_id - 1) as usize;
     let Some(progress) = stats.badges.get_mut(idx) else {
         let err = if stats.badges.is_empty() {
             HostError::NoBadges
         } else {
-            HostError::NoBadge(id)
+            HostError::NoBadge(badge_id)
         };
         state.log_error(err);
         return 0;
@@ -39,7 +48,7 @@ pub(crate) fn add_progress(mut caller: C, id: u32, val: i32) -> u32 {
     u32::from(progress.done) << 16 | u32::from(progress.goal)
 }
 
-pub(crate) fn add_score(mut caller: C, board_id: u32, peer_id: u32, new_score: u32) -> u32 {
+pub(crate) fn add_score(mut caller: C, peer_id: u32, board_id: u32, new_score: u32) -> u32 {
     let state = caller.data_mut();
     state.called = "stats.set_score";
     let Some(stats) = &mut state.app_stats else {
@@ -58,7 +67,7 @@ pub(crate) fn add_score(mut caller: C, board_id: u32, peer_id: u32, new_score: u
     };
 
     let handler = state.net_handler.get_mut();
-    let friend_id: Option<_> = get_friend_id(handler, peer_id);
+    let friend_id = get_friend_id(handler, peer_id);
     let Ok(new_score) = u16::try_from(new_score) else {
         state.log_error("the value is too big");
         return 0;
@@ -80,6 +89,9 @@ pub(crate) fn add_score(mut caller: C, board_id: u32, peer_id: u32, new_score: u
 ///
 /// Returns None if the given peer is this device.
 fn get_friend_id(handler: &mut NetHandler, peer_id: u32) -> Option<u16> {
+    if peer_id == 0xFF {
+        return None;
+    }
     let NetHandler::FrameSyncer(syncer) = handler else {
         return None;
     };
