@@ -127,15 +127,24 @@ pub(crate) fn add_score(mut caller: C, peer_id: u32, board_id: u32, new_score: i
     if let Some(peer) = peer {
         let friend_id = peer.friend_id.unwrap();
         insert_friend_score(&mut scores.friends, friend_id, new_score);
-        for friend in scores.friends.iter() {
-            if friend.index == friend_id {
-                return i32::from(friend.score);
-            }
-        }
+        let Some(max_score) = peer.scores.get_mut(board_idx) else {
+            let err = if peer.scores.is_empty() {
+                HostError::NoBoards
+            } else {
+                HostError::NoBoard(board_id)
+            };
+            state.log_error(err);
+            return 0;
+        };
+        if new_score > *max_score {
+            *max_score = new_score;
+        };
+        i32::from(*max_score)
+    } else {
+        insert_my_score(&mut scores.me, new_score);
+        let personal_best = scores.me[0];
+        i32::from(personal_best)
     }
-    insert_my_score(&mut scores.me, new_score);
-    let personal_best = scores.me[0];
-    i32::from(personal_best)
 }
 
 /// Get the peer with the given ID but only if it's not .
