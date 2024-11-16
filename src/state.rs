@@ -1,6 +1,6 @@
 use crate::canvas::Canvas;
 use crate::config::FullID;
-use crate::error::Stats;
+use crate::error::RuntimeStats;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
 use crate::net::*;
@@ -94,8 +94,8 @@ impl State {
         }
     }
 
-    pub(crate) fn runtime_stats(&self) -> Stats {
-        Stats {
+    pub(crate) fn runtime_stats(&self) -> RuntimeStats {
+        RuntimeStats {
             last_called: self.called,
         }
     }

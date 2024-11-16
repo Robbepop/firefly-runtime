@@ -2,7 +2,7 @@ use core::fmt;
 
 pub enum Error {
     Wasmi(wasmi::Error),
-    FuncCall(&'static str, wasmi::Error, Stats),
+    FuncCall(&'static str, wasmi::Error, RuntimeStats),
     FileEmpty(alloc::string::String),
     FileNotFound(alloc::string::String),
     NoLauncher,
@@ -64,11 +64,11 @@ impl From<wasmi::Error> for Error {
 }
 
 /// Runtime stats provided on guest failure that should help to debug the failure cause.
-pub struct Stats {
+pub struct RuntimeStats {
     pub(crate) last_called: &'static str,
 }
 
-impl fmt::Display for Stats {
+impl fmt::Display for RuntimeStats {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.last_called.is_empty() {
             writeln!(f, "No host functions were called.")?;
