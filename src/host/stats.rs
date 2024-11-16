@@ -12,6 +12,8 @@ pub(crate) fn add_progress(mut caller: C, peer_id: u32, badge_id: u32, val: i32)
     let peer = get_friend(&mut handler, peer_id);
     let result = if let Some(peer) = peer {
         add_progress_friend(state, peer, badge_id, val)
+    } else if peer_id == 0xff {
+        add_progress_everyone(state, &mut handler, badge_id, val)
     } else {
         add_progress_me(state, badge_id, val)
     };
@@ -19,7 +21,30 @@ pub(crate) fn add_progress(mut caller: C, peer_id: u32, badge_id: u32, val: i32)
     result
 }
 
-pub(crate) fn add_progress_me(state: &mut State, badge_id: u32, val: i32) -> u32 {
+fn add_progress_everyone(
+    state: &mut State,
+    handler: &mut NetHandler,
+    badge_id: u32,
+    val: i32,
+) -> u32 {
+    let NetHandler::FrameSyncer(syncer) = handler else {
+        return add_progress_me(state, badge_id, val);
+    };
+    let mut worst: u32 = u32::MAX;
+    for peer in syncer.peers.iter_mut() {
+        let peer_progress = if peer.addr.is_none() {
+            add_progress_me(state, badge_id, val)
+        } else {
+            add_progress_friend(state, peer, badge_id, val)
+        };
+        if peer_progress < worst {
+            worst = peer_progress;
+        }
+    }
+    worst
+}
+
+fn add_progress_me(state: &mut State, badge_id: u32, val: i32) -> u32 {
     let Some(stats) = &mut state.app_stats else {
         state.log_error(HostError::NoStats);
         return 0;
@@ -52,12 +77,7 @@ pub(crate) fn add_progress_me(state: &mut State, badge_id: u32, val: i32) -> u32
     u32::from(progress.done) << 16 | u32::from(progress.goal)
 }
 
-pub(crate) fn add_progress_friend(
-    state: &mut State,
-    peer: &mut FSPeer,
-    badge_id: u32,
-    val: i32,
-) -> u32 {
+fn add_progress_friend(state: &mut State, peer: &mut FSPeer, badge_id: u32, val: i32) -> u32 {
     let Some(stats) = &mut state.app_stats else {
         state.log_error(HostError::NoStats);
         return 0;
