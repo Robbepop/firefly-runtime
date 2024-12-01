@@ -48,7 +48,7 @@ pub struct CanvasBuffer<'a> {
     height: usize,
 }
 
-impl<'a> OriginDimensions for CanvasBuffer<'a> {
+impl OriginDimensions for CanvasBuffer<'_> {
     fn size(&self) -> Size {
         Size {
             width: self.width as u32,
@@ -57,7 +57,7 @@ impl<'a> OriginDimensions for CanvasBuffer<'a> {
     }
 }
 
-impl<'a> DrawTarget for CanvasBuffer<'a> {
+impl DrawTarget for CanvasBuffer<'_> {
     type Color = Gray4;
     type Error = Infallible;
 
@@ -72,7 +72,7 @@ impl<'a> DrawTarget for CanvasBuffer<'a> {
     }
 }
 
-impl<'a> CanvasBuffer<'a> {
+impl CanvasBuffer<'_> {
     fn set_pixel(&mut self, pixel: Pixel<Gray4>) {
         let Pixel(point, color) = pixel;
         let x = point.x as usize;

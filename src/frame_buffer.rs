@@ -217,7 +217,7 @@ where
     color: PhantomData<C>,
 }
 
-impl<'a, C> Iterator for ColorIter<'a, C>
+impl<C> Iterator for ColorIter<'_, C>
 where
     C: RgbColor + FromRGB,
 {

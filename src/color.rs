@@ -30,7 +30,7 @@ where
 }
 
 /// Required by the DrawTarget trait.
-impl<'a, D, C> OriginDimensions for BPPAdapter<'a, D, C>
+impl<D, C> OriginDimensions for BPPAdapter<'_, D, C>
 where
     D: DrawTarget<Color = Gray4> + OriginDimensions,
     C: PixelColor + IntoStorage<Storage = u8>,
@@ -40,7 +40,7 @@ where
     }
 }
 
-impl<'a, D, C> DrawTarget for BPPAdapter<'a, D, C>
+impl<D, C> DrawTarget for BPPAdapter<'_, D, C>
 where
     D: DrawTarget<Color = Gray4> + OriginDimensions,
     C: PixelColor + IntoStorage<Storage = u8>,
