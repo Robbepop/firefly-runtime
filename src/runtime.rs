@@ -267,7 +267,7 @@ where
 
     /// When runtime is created, it takes ownership of [Device]. This method releases it.
     pub fn into_config(self) -> RuntimeConfig<D, C> {
-        let state = self.store.into_data();
+        let mut state = self.store.into_data();
         state.save_app_stats();
         let net_handler = state.net_handler.replace(NetHandler::None);
         RuntimeConfig {

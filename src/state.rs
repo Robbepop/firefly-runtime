@@ -138,7 +138,7 @@ impl State {
         self.name = Some(name)
     }
 
-    pub(crate) fn save_app_stats(&self) {
+    pub(crate) fn save_app_stats(&mut self) {
         let Some(stats) = &self.app_stats else {
             return;
         };

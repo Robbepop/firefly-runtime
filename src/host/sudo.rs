@@ -18,12 +18,12 @@ const MAX_DEPTH: usize = 4;
 pub(crate) fn list_dirs_buf_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
     let state = caller.data_mut();
     state.called = "sudo.list_dirs_buf_size";
-    let state = caller.data();
+    let state = caller.data_mut();
     let Some(memory) = state.memory else {
         state.log_error(HostError::MemoryNotFound);
         return 0;
     };
-    let data = memory.data(&caller);
+    let (data, state) = memory.data_and_store_mut(&mut caller);
     let path_ptr = path_ptr as usize;
     let path_len = path_len as usize;
     let Some(path_bytes) = data.get(path_ptr..(path_ptr + path_len)) else {
