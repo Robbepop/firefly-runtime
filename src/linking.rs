@@ -66,6 +66,7 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>, sudo: bool) -> Result<(), 
 
     linker.func_wrap("net", "get_me", net::get_me)?;
     linker.func_wrap("net", "get_peers", net::get_peers)?;
+    linker.func_wrap("net", "save_stash", net::save_stash)?;
 
     linker.func_wrap("stats", "add_progress", stats::add_progress)?;
     linker.func_wrap("stats", "add_score", stats::add_score)?;

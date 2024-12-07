@@ -126,6 +126,7 @@ impl Connection {
                         return Err(NetcodeError::StashFileError(err.into()))
                     }
                 }
+                stash.shrink_to_fit();
                 stash
             }
             Err(FSError::NotFound) => alloc::vec::Vec::new(),

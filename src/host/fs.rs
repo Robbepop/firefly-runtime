@@ -156,7 +156,7 @@ pub(crate) fn dump_file(
         return 0;
     };
     let Ok(file_size) = file.write(buf) else {
-        state.log_error(HostError::FileRead);
+        state.log_error(HostError::FileWrite);
         return 0;
     };
     if file.flush().is_err() {
