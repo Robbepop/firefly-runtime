@@ -10,6 +10,7 @@ pub(crate) enum NetcodeError {
     UnknownPeer,
     FrameTimeout,
     StatsError(&'static str),
+    StatsFileError(firefly_hal::FSError),
 }
 
 impl From<firefly_hal::NetworkError> for NetcodeError {
@@ -31,6 +32,7 @@ impl fmt::Display for NetcodeError {
             UnknownPeer => write!(f, "received message from unknown peer"),
             FrameTimeout => write!(f, "timed out waiting for frame state"),
             StatsError(msg) => write!(f, "{msg}"),
+            StatsFileError(err) => write!(f, "cannot open stats file: {err}"),
         }
     }
 }

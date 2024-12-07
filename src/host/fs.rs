@@ -31,11 +31,17 @@ pub(crate) fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 
         return 0;
     };
     let path = &["roms", state.id.author(), state.id.app(), name];
-    if let Some(size) = state.device.get_file_size(path) {
+    if let Ok(size) = state.device.get_file_size(path) {
         return size;
     }
     let path = &["data", state.id.author(), state.id.app(), "etc", name];
-    state.device.get_file_size(path).unwrap_or(0)
+    match state.device.get_file_size(path) {
+        Ok(size) => size,
+        Err(err) => {
+            state.log_error(err);
+            0
+        }
+    }
 }
 
 /// DEPRECATED
@@ -75,11 +81,11 @@ pub(crate) fn load_file(
 
     let path = &["roms", state.id.author(), state.id.app(), name];
     let mut file = match state.device.open_file(path) {
-        Some(file) => file,
-        None => {
+        Ok(file) => file,
+        Err(err) => {
             let path = &["data", state.id.author(), state.id.app(), "etc", name];
-            let Some(file) = state.device.open_file(path) else {
-                state.log_error(HostError::FileNotFound);
+            let Ok(file) = state.device.open_file(path) else {
+                state.log_error(err);
                 return 0;
             };
             let handler = state.net_handler.get_mut();
@@ -130,15 +136,18 @@ pub(crate) fn dump_file(
 
     // reject writing into files that are already present in ROM to avoid shadowing
     let path = &["roms", state.id.author(), state.id.app(), name];
-    if state.device.get_file_size(path).is_some() {
+    if state.device.get_file_size(path).is_ok() {
         state.log_error(HostError::FileReadOnly);
         return 0;
     }
 
     let path = &["data", state.id.author(), state.id.app(), "etc", name];
-    let Some(mut file) = state.device.create_file(path) else {
-        state.log_error(HostError::FileCreate);
-        return 0;
+    let mut file = match state.device.create_file(path) {
+        Ok(file) => file,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
     };
     let buf_ptr = buf_ptr as usize;
     let buf_len = buf_len as usize;
@@ -175,15 +184,14 @@ pub(crate) fn remove_file(mut caller: C, path_ptr: u32, path_len: u32) {
 
     // reject removing files that are already present in ROM to avoid shadowing
     let path = &["roms", state.id.author(), state.id.app(), name];
-    if state.device.get_file_size(path).is_some() {
+    if state.device.get_file_size(path).is_ok() {
         state.log_error(HostError::FileReadOnly);
         return;
     }
 
     let path = &["data", state.id.author(), state.id.app(), "etc", name];
-    let ok = state.device.remove_file(path);
-    if !ok {
-        state.log_error(HostError::FileRemove);
+    if let Err(err) = state.device.remove_file(path) {
+        state.log_error(err);
     };
 }
 

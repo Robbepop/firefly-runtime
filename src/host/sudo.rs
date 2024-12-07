@@ -43,9 +43,12 @@ pub(crate) fn list_dirs_buf_size(mut caller: C, path_ptr: u32, path_len: u32) ->
     }
 
     let mut size = 0;
-    state.device.iter_dir(&path, |_kind, entry_name| {
+    let res = state.device.iter_dir(&path, |_kind, entry_name| {
         size += entry_name.len() + 1;
     });
+    if let Err(err) = res {
+        state.log_error(err);
+    }
     size as u32
 }
 
@@ -83,12 +86,15 @@ pub(crate) fn list_dirs(
     }
 
     let mut pos = 0;
-    state.device.iter_dir(&path, |_kind, entry_name| {
+    let res = state.device.iter_dir(&path, |_kind, entry_name| {
         buf[pos] = entry_name.len() as u8;
         // TODO: It can panic! Don't trust that the buffer is long enough. Make it safe.
         buf[(pos + 1)..(pos + 1 + entry_name.len())].copy_from_slice(entry_name);
         pos += entry_name.len() + 1;
     });
+    if let Err(err) = res {
+        state.log_error(err);
+    }
     pos as u32
 }
 
@@ -177,9 +183,12 @@ pub(crate) fn load_file(
         }
     }
 
-    let Some(mut file) = state.device.open_file(&path) else {
-        state.log_error(HostError::FileNotFound);
-        return 0;
+    let mut file = match state.device.open_file(&path) {
+        Ok(file) => file,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
     };
     let Ok(file_size) = file.read(buf) else {
         state.log_error(HostError::FileRead);

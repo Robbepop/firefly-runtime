@@ -115,7 +115,7 @@ impl Connection {
 
         // check if the stats file even exists
         let stats_path = &["data", id.author(), id.app(), "stats"];
-        let Some(size) = device.get_file_size(stats_path) else {
+        let Ok(size) = device.get_file_size(stats_path) else {
             return Ok(AppIntro {
                 badges: Box::new([]),
                 scores: Box::new([]),
@@ -125,8 +125,9 @@ impl Connection {
         if size == 0 {
             return Err(NetcodeError::StatsError("file is empty"));
         }
-        let Some(mut stream) = device.open_file(stats_path) else {
-            return Err(NetcodeError::StatsError("cannot open stats file"));
+        let mut stream = match device.open_file(stats_path) {
+            Ok(stream) => stream,
+            Err(err) => return Err(NetcodeError::StatsFileError(err)),
         };
         let mut raw = alloc::vec![0u8; size as usize];
         let res = stream.read(&mut raw);
@@ -359,8 +360,8 @@ fn get_friend_id(device: &mut DeviceImpl, device_name: &str) -> Option<u16> {
     }
     let device_name = device_name.as_bytes();
     let path = &["sys", "friends"];
-    let Some(mut stream) = device.open_file(path) else {
-        let mut stream = device.create_file(path)?;
+    let Ok(mut stream) = device.open_file(path) else {
+        let mut stream = device.create_file(path).ok()?;
         stream.write(&[device_name.len() as u8]).ok()?;
         stream.write(device_name).ok()?;
         return Some(1);
@@ -382,7 +383,7 @@ fn get_friend_id(device: &mut DeviceImpl, device_name: &str) -> Option<u16> {
         i += 1;
     }
 
-    let mut stream = device.append_file(path)?;
+    let mut stream = device.append_file(path).ok()?;
     stream.write(&[device_name.len() as u8]).ok()?;
     stream.write(device_name).ok()?;
     Some(i + 1)

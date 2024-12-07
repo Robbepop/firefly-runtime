@@ -56,9 +56,10 @@ where
         };
         id.validate()?;
 
-        let path = &["roms", id.author(), id.app(), "_meta"];
-        let Some(mut file) = config.device.open_file(path) else {
-            return Err(Error::FileNotFound(path.join("/")));
+        let meta_path = &["roms", id.author(), id.app(), "_meta"];
+        let mut file = match config.device.open_file(meta_path) {
+            Ok(file) => file,
+            Err(err) => return Err(Error::OpenFile(meta_path.join("/"), err)),
         };
         let bytes = &mut [0; 64];
         let res = file.read(bytes);
@@ -81,19 +82,14 @@ where
         if let Err(err) = res {
             return Err(Error::SerialStart(err));
         }
-
-        let path = &["roms", id.author(), id.app(), "_bin"];
-        let Some(stream) = config.device.open_file(path) else {
-            return Err(Error::FileNotFound(path.join("/")));
-        };
         let now = config.device.now();
-
+        let bin_path = &["roms", id.author(), id.app(), "_bin"];
         let engine = {
             let mut wasmi_config = wasmi::Config::default();
             wasmi_config.consume_fuel(true);
-            if let Some(bin_size) = config.device.get_file_size(path) {
+            if let Ok(bin_size) = config.device.get_file_size(bin_path) {
                 if bin_size == 0 {
-                    return Err(Error::FileEmpty(path.join("/")));
+                    return Err(Error::FileEmpty(bin_path.join("/")));
                 }
                 if bin_size > 200 * KB {
                     wasmi_config.compilation_mode(wasmi::CompilationMode::Lazy);
@@ -105,12 +101,13 @@ where
         let mut state = State::new(id.clone(), config.device, config.net_handler);
 
         let stats_path = &["data", id.author(), id.app(), "stats"];
-        if let Some(size) = state.device.get_file_size(stats_path) {
+        if let Ok(size) = state.device.get_file_size(stats_path) {
             if size == 0 {
                 return Err(Error::FileEmpty(stats_path.join("/")));
             }
-            let Some(mut stream) = state.device.open_file(stats_path) else {
-                return Err(Error::FileNotFound(stats_path.join("/")));
+            let mut stream = match state.device.open_file(stats_path) {
+                Ok(file) => file,
+                Err(err) => return Err(Error::OpenFile(stats_path.join("/"), err)),
             };
             let mut raw = alloc::vec![0u8; size as usize];
             let res = stream.read(&mut raw);
@@ -124,6 +121,10 @@ where
             state.app_stats = Some(stats)
         }
 
+        let stream = match state.device.open_file(bin_path) {
+            Ok(file) => file,
+            Err(err) => return Err(Error::OpenFile(bin_path.join("/"), err)),
+        };
         let mut store = wasmi::Store::<State>::new(&engine, state);
         _ = store.set_fuel(FUEL_PER_CALL);
         let instance = {
@@ -437,7 +438,7 @@ fn detect_launcher(device: &mut DeviceImpl) -> Option<FullID> {
 
 fn get_short_meta(fname: &str, device: &mut DeviceImpl) -> Option<FullID> {
     let path = &["sys", fname];
-    let mut file = device.open_file(path)?;
+    let mut file = device.open_file(path).ok()?;
     let bytes = &mut [0; 64];
     file.read(bytes).ok()?;
     let meta = ShortMeta::decode(bytes).ok()?;

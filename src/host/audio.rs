@@ -76,9 +76,12 @@ pub(crate) fn add_file(mut caller: C, parent_id: u32, ptr: u32, len: u32) -> u32
         return 0;
     };
     let path = &["roms", state.id.author(), state.id.app(), name];
-    let Some(reader) = state.device.open_file(path) else {
-        state.log_error("cannot open audio file");
-        return 0;
+    let reader = match state.device.open_file(path) {
+        Ok(reader) => reader,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
     };
     let proc = match Pcm::from_file(reader) {
         Ok(proc) => proc,

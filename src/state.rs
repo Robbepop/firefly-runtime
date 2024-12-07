@@ -142,12 +142,20 @@ impl State {
         let Some(stats) = &self.app_stats else {
             return;
         };
-        let Ok(res) = stats.encode_vec() else {
-            return;
+        let res = match stats.encode_vec() {
+            Ok(res) => res,
+            Err(err) => {
+                self.log_error(err);
+                return;
+            }
         };
         let stats_path = &["data", self.id.author(), self.id.app(), "stats"];
-        let Some(mut stream) = self.device.create_file(stats_path) else {
-            return;
+        let mut stream = match self.device.create_file(stats_path) {
+            Ok(stream) => stream,
+            Err(err) => {
+                self.log_error(err);
+                return;
+            }
         };
         _ = stream.write_all(&res);
     }
@@ -262,10 +270,19 @@ impl State {
     fn take_screenshot(&mut self) {
         let dir_path = &["data", self.id.author(), self.id.app(), "shots"];
         let mut index = 1;
-        self.device.iter_dir(dir_path, |_, _| index += 1);
+        let res = self.device.iter_dir(dir_path, |_, _| index += 1);
+        if let Err(err) = res {
+            self.log_error(err);
+        }
         let file_name = alloc::format!("{}.png", index);
         let path = &["data", self.id.author(), self.id.app(), "shots", &file_name];
-        let mut file = self.device.create_file(path).unwrap();
+        let mut file = match self.device.create_file(path) {
+            Ok(file) => file,
+            Err(err) => {
+                self.log_error(err);
+                return;
+            }
+        };
         save_png(&mut file, &self.frame.palette, &*self.frame.data).unwrap();
     }
 
@@ -286,7 +303,7 @@ impl State {
 
     fn read_name(&mut self) -> Option<heapless::String<16>> {
         let mut buf = heapless::Vec::<u8, 16>::from_slice(&[0; 16]).unwrap();
-        let mut file = self.device.open_file(&["sys", "name"])?;
+        let mut file = self.device.open_file(&["sys", "name"]).ok()?;
         let size = file.read(&mut buf).ok()?;
         buf.truncate(size);
         let name = heapless::String::<16>::from_utf8(buf).unwrap();
