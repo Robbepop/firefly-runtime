@@ -147,6 +147,7 @@ pub(crate) fn add_score(mut caller: C, peer_id: u32, board_id: u32, new_score: i
         state.log_error(HostError::ValueTooBig);
         return 0;
     };
+    state.app_stats_dirty = true;
     if let Some(peer) = peer {
         let friend_id = peer.friend_id.unwrap();
         insert_friend_score(&mut scores.friends, friend_id, new_score);
