@@ -65,6 +65,8 @@ pub(crate) struct State {
 
     pub app_stats: Option<firefly_types::Stats>,
     pub app_stats_dirty: bool,
+    pub stash: Option<alloc::boxed::Box<[u8]>>,
+    pub stash_dirty: bool,
 
     pub net_handler: Cell<NetHandler>,
     pub connect_scene: Option<ConnectScene>,
@@ -91,6 +93,8 @@ impl State {
             name: None,
             app_stats: None,
             app_stats_dirty: false,
+            stash: None,
+            stash_dirty: false,
         }
     }
 
@@ -138,10 +142,36 @@ impl State {
         self.name = Some(name)
     }
 
+    /// Dump stash (if any) on disk.
+    pub(crate) fn save_stash(&mut self) {
+        let Some(stash) = &self.stash else {
+            return;
+        };
+        if !self.stash_dirty {
+            return;
+        }
+        let stash_path = &["data", self.id.author(), self.id.app(), "stash"];
+        let mut stream = match self.device.create_file(stash_path) {
+            Ok(stream) => stream,
+            Err(err) => {
+                self.log_error(err);
+                return;
+            }
+        };
+        let res = stream.write_all(&stash[..]);
+        if let Err(err) = res {
+            self.log_error(err);
+        }
+    }
+
+    /// Dump app stats on disk.
     pub(crate) fn save_app_stats(&mut self) {
         let Some(stats) = &self.app_stats else {
             return;
         };
+        if !self.app_stats_dirty {
+            return;
+        }
         let res = match stats.encode_vec() {
             Ok(res) => res,
             Err(err) => {
@@ -157,7 +187,10 @@ impl State {
                 return;
             }
         };
-        _ = stream.write_all(&res);
+        let res = stream.write_all(&res);
+        if let Err(err) = res {
+            self.log_error(err);
+        }
     }
 
     /// Update the state: read inputs, handle system commands.
