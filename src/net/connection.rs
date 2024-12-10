@@ -1,5 +1,5 @@
 use super::*;
-use crate::FullID;
+use crate::{utils::read_all, FullID};
 use alloc::boxed::Box;
 use embedded_io::{Read, Write};
 use firefly_hal::*;
@@ -116,19 +116,10 @@ impl Connection {
         // read stash file
         let stash_path = &["data", id.author(), id.app(), "stash"];
         let stash = match device.open_file(stash_path) {
-            Ok(mut stream) => {
-                let mut stash = alloc::vec::Vec::with_capacity(81);
-                let res = stream.read_exact(&mut stash[..]);
-                match res {
-                    Ok(_) => return Err(NetcodeError::StashError("stash file is too big")),
-                    Err(embedded_io::ReadExactError::UnexpectedEof) => {}
-                    Err(embedded_io::ReadExactError::Other(err)) => {
-                        return Err(NetcodeError::StashFileError(err.into()))
-                    }
-                }
-                stash.shrink_to_fit();
-                stash
-            }
+            Ok(stream) => match read_all(stream) {
+                Ok(stream) => stream,
+                Err(err) => return Err(NetcodeError::StashFileError(err.into())),
+            },
             Err(FSError::NotFound) => alloc::vec::Vec::new(),
             Err(err) => return Err(NetcodeError::StashFileError(err)),
         };

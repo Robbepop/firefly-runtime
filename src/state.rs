@@ -4,6 +4,7 @@ use crate::error::RuntimeStats;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
 use crate::png::save_png;
+use crate::utils::read_all;
 use crate::{net::*, Error};
 use core::cell::Cell;
 use core::fmt::Display;
@@ -101,21 +102,14 @@ impl State {
     /// Read app stats from FS.
     pub(crate) fn load_app_stats(&mut self) -> Result<(), Error> {
         let path = &["data", self.id.author(), self.id.app(), "stats"];
-        let Ok(size) = self.device.get_file_size(path) else {
-            return Ok(());
-        };
-        if size == 0 {
-            return Err(Error::FileEmpty(path.join("/")));
-        }
-        let mut stream = match self.device.open_file(path) {
+        let stream = match self.device.open_file(path) {
             Ok(file) => file,
+            Err(FSError::NotFound) => return Ok(()),
             Err(err) => return Err(Error::OpenFile(path.join("/"), err)),
         };
-        let mut raw = alloc::vec![0u8; size as usize];
-        let res = stream.read(&mut raw);
-        if res.is_err() {
+        let Ok(raw) = read_all(stream) else {
             return Err(Error::ReadStats);
-        }
+        };
         let stats = match firefly_types::Stats::decode(&raw) {
             Ok(stats) => stats,
             Err(err) => return Err(Error::DecodeStats(err)),
@@ -133,17 +127,17 @@ impl State {
         if size == 0 {
             return Err(Error::FileEmpty(path.join("/")));
         }
-        let mut stream = match self.device.open_file(path) {
+        let stream = match self.device.open_file(path) {
             Ok(file) => file,
             Err(err) => return Err(Error::OpenFile(path.join("/"), err)),
         };
         if self.stash.len() < size as usize {
             self.stash.reserve(size as usize - self.stash.len());
         }
-        let res = stream.read(&mut self.stash);
-        if res.is_err() {
+        let Ok(raw) = read_all(stream) else {
             return Err(Error::ReadStash);
-        }
+        };
+        self.stash = raw;
         Ok(())
     }
 
