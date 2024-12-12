@@ -16,6 +16,7 @@ where
         }
         filled_size += gained_size;
     }
+    result.truncate(filled_size);
     result.shrink_to_fit();
     Ok(result)
 }
