@@ -20,3 +20,15 @@ where
     result.shrink_to_fit();
     Ok(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_all() {
+        let given = alloc::vec![1, 2, 3, 4];
+        let res = read_all(&given[..]).unwrap();
+        assert_eq!(res, given);
+    }
+}
