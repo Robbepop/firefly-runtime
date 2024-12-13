@@ -79,6 +79,39 @@ pub(crate) fn save_stash(mut caller: C, peer_id: u32, buf_ptr: u32, buf_len: u32
     state.net_handler.replace(handler);
 }
 
+pub(crate) fn load_stash(mut caller: C, peer_id: u32, buf_ptr: u32, buf_len: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "net.load_stash";
+
+    let Some(memory) = state.memory else {
+        state.log_error(HostError::MemoryNotFound);
+        return 0;
+    };
+    let (data, state) = memory.data_and_store_mut(&mut caller);
+    let buf_ptr = buf_ptr as usize;
+    let buf_len = buf_len as usize;
+    let Some(buf) = data.get_mut(buf_ptr..(buf_ptr + buf_len)) else {
+        state.log_error(HostError::OomPointer);
+        return 0;
+    };
+
+    let mut handler = state.net_handler.replace(NetHandler::None);
+    let peer = get_friend(&mut handler, peer_id);
+    let stash = match peer {
+        Some(peer) => &peer.stash,
+        None => &state.stash,
+    };
+    let stash_len = stash.len();
+    if stash_len > buf.len() {
+        state.log_error("the buffer is not big enough to fit stash");
+        buf.copy_from_slice(&stash[..buf.len()]);
+    } else {
+        buf[..stash_len].copy_from_slice(&stash[..]);
+    };
+    state.net_handler.replace(handler);
+    stash_len as u32
+}
+
 /// Repalce the content of the vector with the buffer.
 fn rewrite_vec(stash: &mut alloc::vec::Vec<u8>, buf: &[u8]) {
     let stash_len = stash.len();
