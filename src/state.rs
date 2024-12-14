@@ -107,8 +107,9 @@ impl State {
             Err(FSError::NotFound) => return Ok(()),
             Err(err) => return Err(Error::OpenFile(path.join("/"), err)),
         };
-        let Ok(raw) = read_all(stream) else {
-            return Err(Error::ReadStats);
+        let raw = match read_all(stream) {
+            Ok(raw) => raw,
+            Err(err) => return Err(Error::ReadFile(path.join("/"), err.into())),
         };
         let stats = match firefly_types::Stats::decode(&raw) {
             Ok(stats) => stats,
@@ -134,8 +135,9 @@ impl State {
         if self.stash.len() < size as usize {
             self.stash.reserve(size as usize - self.stash.len());
         }
-        let Ok(raw) = read_all(stream) else {
-            return Err(Error::ReadStash);
+        let raw = match read_all(stream) {
+            Ok(raw) => raw,
+            Err(err) => return Err(Error::ReadFile(path.join("/"), err.into())),
         };
         self.stash = raw;
         Ok(())

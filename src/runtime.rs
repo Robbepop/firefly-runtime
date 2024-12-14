@@ -63,7 +63,7 @@ where
         };
         let bytes = match read_all(file) {
             Ok(bytes) => bytes,
-            Err(_) => return Err(Error::ReadMeta),
+            Err(err) => return Err(Error::ReadFile(meta_path.join("/"), err.into())),
         };
         let meta = match Meta::decode(&bytes[..]) {
             Ok(meta) => meta,

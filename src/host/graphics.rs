@@ -1,6 +1,6 @@
 use crate::canvas::Canvas;
 use crate::color::BPPAdapter;
-use crate::error::{Error, HostError};
+use crate::error::HostError;
 use crate::state::State;
 use core::convert::Infallible;
 use embedded_graphics::image::{Image, ImageRaw, ImageRawLE};
@@ -375,7 +375,7 @@ pub(crate) fn set_canvas(mut caller: C, ptr: u32, len: u32) {
     let width = u16::from_le_bytes([image_bytes[2], image_bytes[3]]) as u32;
     let image_bytes = &image_bytes[HEADER..];
     if image_bytes.len() * 2 % width as usize != 0 {
-        state.log_error(Error::InvalidWidth);
+        state.log_error(HostError::InvalidWidth);
         return;
     }
     let canvas = Canvas::new(ptr + HEADER as u32, len - HEADER as u32, width);
@@ -450,7 +450,7 @@ fn draw_image_inner(mut caller: C, ptr: u32, len: u32, x: i32, y: i32, sub: Opti
         _ => 2,
     };
     if image_bytes.len() * ppb % width as usize != 0 {
-        state.log_error(Error::InvalidWidth);
+        state.log_error(HostError::InvalidWidth);
         return;
     }
 
