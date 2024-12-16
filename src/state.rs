@@ -4,7 +4,7 @@ use crate::error::RuntimeStats;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
 use crate::png::save_png;
-use crate::utils::{read_all, read_into};
+use crate::utils::{read_all, read_all_into, read_into};
 use crate::{net::*, Error};
 use core::cell::Cell;
 use core::fmt::Display;
@@ -122,24 +122,15 @@ impl State {
     /// Read stash from FS.
     pub(crate) fn load_stash(&mut self) -> Result<(), Error> {
         let path = &["data", self.id.author(), self.id.app(), "stash"];
-        let Ok(size) = self.device.get_file_size(path) else {
-            return Ok(());
-        };
-        if size == 0 {
-            return Err(Error::FileEmpty(path.join("/")));
-        }
         let stream = match self.device.open_file(path) {
             Ok(file) => file,
+            Err(FSError::NotFound) => return Ok(()),
             Err(err) => return Err(Error::OpenFile(path.join("/"), err)),
         };
-        if self.stash.len() < size as usize {
-            self.stash.reserve(size as usize - self.stash.len());
-        }
-        let raw = match read_all(stream) {
-            Ok(raw) => raw,
-            Err(err) => return Err(Error::ReadFile(path.join("/"), err.into())),
+        let res = read_all_into(stream, &mut self.stash);
+        if let Err(err) = res {
+            return Err(Error::ReadFile(path.join("/"), err.into()));
         };
-        self.stash = raw;
         Ok(())
     }
 

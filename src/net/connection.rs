@@ -127,27 +127,23 @@ impl Connection {
             Err(err) => return Err(NetcodeError::StashFileError(err)),
         };
 
-        // check if the stats file even exists
         let stats_path = &["data", id.author(), id.app(), "stats"];
-        let Ok(size) = device.get_file_size(stats_path) else {
-            return Ok(AppIntro {
-                badges: Box::new([]),
-                scores: Box::new([]),
-                stash,
-            });
-        };
-
-        if size == 0 {
-            return Err(NetcodeError::StatsError("file is empty"));
-        }
-        let mut stream = match device.open_file(stats_path) {
+        let stream = match device.open_file(stats_path) {
             Ok(stream) => stream,
+            Err(FSError::NotFound) => {
+                return Ok(AppIntro {
+                    badges: Box::new([]),
+                    scores: Box::new([]),
+                    stash,
+                });
+            }
             Err(err) => return Err(NetcodeError::StatsFileError(err)),
         };
-        let mut raw = alloc::vec![0u8; size as usize];
-        let res = stream.read(&mut raw);
-        if res.is_err() {
+        let Ok(raw) = read_all(stream) else {
             return Err(NetcodeError::StatsError("cannot read stats file"));
+        };
+        if raw.is_empty() {
+            return Err(NetcodeError::StatsError("file is empty"));
         }
         let stats = match Stats::decode(&raw) {
             Ok(stats) => stats,
