@@ -91,7 +91,7 @@ fn make_store() -> wasmi::Store<State> {
         "test-author".try_into().unwrap(),
         "test-app".try_into().unwrap(),
     );
-    let state = State::new(id, device, NetHandler::None);
+    let state = State::new(id, device, NetHandler::None, false);
     wasmi::Store::new(&engine, state)
 }
 

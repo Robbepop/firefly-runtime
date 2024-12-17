@@ -74,14 +74,19 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub(crate) fn new(id: FullID, device: DeviceImpl, net_handler: NetHandler) -> Self {
+    pub(crate) fn new(
+        id: FullID,
+        device: DeviceImpl,
+        net_handler: NetHandler,
+        launcher: bool,
+    ) -> Self {
         let offline = matches!(net_handler, NetHandler::None);
         Self {
             device,
             id,
             frame: FrameBuffer::new(),
             canvas: None,
-            menu: Menu::new(offline),
+            menu: Menu::new(offline, launcher),
             audio: firefly_audio::Manager::new(),
             seed: 0,
             memory: None,

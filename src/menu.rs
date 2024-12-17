@@ -63,15 +63,16 @@ pub(crate) struct Menu {
 }
 
 impl Menu {
-    pub fn new(offline: bool) -> Self {
+    pub fn new(offline: bool, launcher: bool) -> Self {
         let mut items = heapless::Vec::new();
-        if offline {
+        if offline && launcher {
             _ = items.push(MenuItem::Connect);
         }
         _ = items.push(MenuItem::ScreenShot);
-        _ = items.push(MenuItem::Restart);
-        // TODO: hide it in launcher
-        _ = items.push(MenuItem::Quit);
+        if !launcher {
+            _ = items.push(MenuItem::Restart);
+            _ = items.push(MenuItem::Quit);
+        }
         Self {
             app_items: alloc::vec::Vec::new(),
             sys_items: items,

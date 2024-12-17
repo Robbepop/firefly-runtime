@@ -77,6 +77,7 @@ where
             return Err(Error::AppIDMismatch);
         }
         let sudo = meta.sudo;
+        let launcher = meta.launcher;
 
         let mut serial = config.device.serial();
         let res = serial.start();
@@ -99,7 +100,7 @@ where
             wasmi::Engine::new(&wasmi_config)
         };
 
-        let mut state = State::new(id.clone(), config.device, config.net_handler);
+        let mut state = State::new(id.clone(), config.device, config.net_handler, launcher);
         state.load_app_stats()?;
         state.load_stash()?;
 
