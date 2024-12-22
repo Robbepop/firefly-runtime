@@ -59,10 +59,10 @@ pub(crate) struct State {
     /// The last called host function.
     pub called: &'static str,
 
-    /// The device name. Lazy loaded on demand.
+    /// The device settings. Lazy loaded on demand.
     ///
-    /// None if not cached. Empty string if not provided or invalid.
-    name: Option<heapless::String<16>>,
+    /// None if not cached.
+    settings: Option<firefly_types::Settings>,
 
     pub app_stats: Option<firefly_types::Stats>,
     pub app_stats_dirty: bool,
@@ -96,7 +96,7 @@ impl State {
             called: "",
             net_handler: Cell::new(net_handler),
             connect_scene: None,
-            name: None,
+            settings: None,
             app_stats: None,
             app_stats_dirty: false,
             stash: alloc::vec::Vec::new(),
@@ -166,21 +166,50 @@ impl State {
         };
     }
 
-    pub(crate) fn get_name(&mut self) -> &str {
-        if self.name.is_none() {
-            let mut name = self.read_name().unwrap_or_default();
-            if firefly_types::validate_id(&name).is_err() {
-                self.device.log_error("runtime", "device has invalid name");
-                name = heapless::String::new()
-            };
-            self.name = Some(name);
+    pub(crate) fn get_settings(&mut self) -> &mut firefly_types::Settings {
+        use crate::alloc::string::ToString;
+        if self.settings.is_none() {
+            let settings = self.load_settings();
+            match settings {
+                Some(settings) => self.settings = Some(settings),
+                None => {
+                    self.settings = Some(firefly_types::Settings {
+                        xp: 0,
+                        badges: 0,
+                        lang: [b'e', b'n'],
+                        name: "anonymous".to_string(),
+                        timezone: "Europe/Amsterdam".to_string(),
+                    })
+                }
+            }
         }
-        self.name.as_ref().unwrap()
+        self.settings.as_mut().unwrap()
     }
 
-    #[cfg(test)]
-    pub(crate) fn set_name(&mut self, name: heapless::String<16>) {
-        self.name = Some(name)
+    fn load_settings(&mut self) -> Option<firefly_types::Settings> {
+        let path = &["sys", "config"];
+        let file = match self.device.open_file(path) {
+            Ok(file) => file,
+            Err(_) => {
+                self.log_error("failed to open settings");
+                return None;
+            }
+        };
+        let raw = match read_all(file) {
+            Ok(raw) => raw,
+            Err(_) => {
+                self.log_error("failed to read settings");
+                return None;
+            }
+        };
+        let settings = match firefly_types::Settings::decode(&raw[..]) {
+            Ok(settings) => settings,
+            Err(_) => {
+                self.log_error("failed to parse settings");
+                return None;
+            }
+        };
+        Some(settings)
     }
 
     /// Dump stash (if any) on disk.

@@ -93,7 +93,7 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
     let name = if is_online(state) {
         get_name_for_peer(state, index)
     } else {
-        state.get_name()
+        &state.get_settings().name
     };
     if name.is_empty() {
         return 0;

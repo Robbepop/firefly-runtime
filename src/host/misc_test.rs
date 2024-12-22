@@ -2,7 +2,6 @@ use crate::config::FullID;
 use crate::host::misc::*;
 use crate::state::{NetHandler, State};
 use firefly_hal::{DeviceConfig, DeviceImpl};
-use heapless::String;
 use std::path::PathBuf;
 
 #[test]
@@ -57,7 +56,7 @@ fn test_get_random() {
 fn test_get_name() {
     let mut store = make_store();
     let state = store.data_mut();
-    state.set_name(String::try_from("hello").unwrap());
+    state.get_settings().name = "hello".to_string();
     let memory = make_memory(&mut store);
 
     let func = wasmi::Func::wrap(&mut store, get_name);
