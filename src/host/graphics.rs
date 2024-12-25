@@ -10,7 +10,7 @@ use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::*;
 use embedded_graphics::text::Text;
 
-type C<'a> = wasmi::Caller<'a, State<'a>>;
+type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
 
 /// Set every pixel of the frame buffer to the given color.
 pub(crate) fn clear_screen(mut caller: C, color: i32) {
@@ -535,27 +535,6 @@ fn get_shape_style(fill_color: u32, stroke_color: u32, stroke_width: u32) -> Pri
         style.stroke_width = stroke_width;
     }
     style
-}
-
-/// Get State from Store and a slice of bytes from Memory in the given range.
-fn get_bytes<'a>(
-    caller: &'a mut C<'a>,
-    ptr: u32,
-    len: u32,
-) -> Option<(&'a mut State<'a>, &'a [u8])> {
-    let state = caller.data();
-    let Some(memory) = state.memory else {
-        state.log_error(HostError::MemoryNotFound);
-        return None;
-    };
-    let (data, state) = memory.data_and_store_mut(caller);
-    let ptr = ptr as usize;
-    let len = len as usize;
-    let Some(bytes) = &data.get(ptr..(ptr + len)) else {
-        state.log_error(HostError::OomPointer);
-        return None;
-    };
-    Some((state, bytes))
 }
 
 /// Load mono font from the firefly format.

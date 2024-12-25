@@ -2,7 +2,7 @@ use crate::error::HostError;
 use crate::state::{NetHandler, State};
 use firefly_hal::Device;
 
-type C<'a> = wasmi::Caller<'a, State<'a>>;
+type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
 
 /// Write a debug log message into console.
 pub(crate) fn log_debug(mut caller: C, ptr: u32, len: u32) {
@@ -114,10 +114,7 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
         return 0;
     };
     buf.copy_from_slice(name.as_bytes());
-    let result = name.len() as u32;
-    // drop(data);
-    // drop(state);
-    result
+    name.len() as u32
 }
 
 /// Check if there is a frame syncer available.
