@@ -319,7 +319,7 @@ impl<'a> State<'a> {
         self.net_handler.replace(handler);
     }
 
-    fn update_connector(&mut self, mut connector: Connector<'a>) -> NetHandler {
+    fn update_connector<'b>(&mut self, mut connector: Connector<'b>) -> NetHandler<'b> {
         connector.update(&self.device);
         let Some(scene) = self.connect_scene.as_mut() else {
             return NetHandler::Connector(connector);
@@ -352,7 +352,7 @@ impl<'a> State<'a> {
         }
     }
 
-    fn update_connection(&mut self, mut connection: Connection<'a>) -> NetHandler {
+    fn update_connection<'b>(&mut self, mut connection: Connection<'b>) -> NetHandler<'b> {
         let status = connection.update(&mut self.device);
         if matches!(status, ConnectionStatus::Launching) {
             if let Some(app_id) = &connection.app {
