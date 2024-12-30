@@ -180,6 +180,7 @@ where
     pub fn update(&mut self) -> Result<bool, Error> {
         self.handle_serial()?;
         let state = self.store.data_mut();
+        let menu_was_active = state.menu.active();
         let menu_index = state.update();
 
         if let Some(scene) = &state.connect_scene {
@@ -191,7 +192,8 @@ where
         }
 
         // TODO: pause audio when opening menu
-        if state.menu.active() {
+        let menu_is_active = state.menu.active();
+        if menu_is_active {
             // We render the system menu directly on the screen,
             // bypassing the frame buffer. That way, we preserve
             // the frame buffer rendered by the app.
@@ -202,6 +204,14 @@ where
             }
             self.delay();
             return Ok(false);
+        } else if menu_was_active {
+            // When menu was open but now closed, if the app doesn't have the `render`
+            // callback defined, the screen flushing will never be called.
+            // As a result, the menu image will stuck on the display.
+            // To avoid that, fill the screen with black.
+            //
+            // Why not white? To avoid flashing that can cause epilepsy episode.
+            _ = self.display.clear(C::BLACK);
         }
 
         // If a custom menu item is selected, trigger the handle_menu callback.
