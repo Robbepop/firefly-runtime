@@ -70,7 +70,8 @@ impl DrawTarget for FrameBuffer {
     {
         self.dirty = true;
         for pixel in pixels {
-            self.set_pixel(pixel);
+            let Pixel(point, color) = pixel;
+            self.set_pixel(point, color);
         }
         Ok(())
     }
@@ -97,7 +98,7 @@ impl DrawTarget for FrameBuffer {
 
         if right_x - left_x <= 4 {
             for point in area.points() {
-                self.set_pixel(Pixel(point, color));
+                self.set_pixel(point, color);
             }
             return Ok(());
         }
@@ -119,7 +120,7 @@ impl DrawTarget for FrameBuffer {
             for y in top_y..bottom_y {
                 let x = left_x as i32;
                 let y = y as i32;
-                self.set_pixel(Pixel(Point { x, y }, color));
+                self.set_pixel(Point { x, y }, color);
             }
         }
 
@@ -127,7 +128,7 @@ impl DrawTarget for FrameBuffer {
             for y in top_y..bottom_y {
                 let x = right_x as i32 - 1;
                 let y = y as i32;
-                self.set_pixel(Pixel(Point { x, y }, color));
+                self.set_pixel(Point { x, y }, color);
             }
         }
 
@@ -184,8 +185,7 @@ impl FrameBuffer {
     /// Set color of a single pixel at the given coordinates.
     ///
     /// Does NOT mark the buffer as dirty. This must be done by the caller.
-    fn set_pixel(&mut self, pixel: Pixel<Gray4>) {
-        let Pixel(point, color) = pixel;
+    fn set_pixel(&mut self, point: Point, color: Gray4) {
         let x = point.x as usize;
         let y = point.y as usize;
         if y >= HEIGHT || x >= WIDTH {
