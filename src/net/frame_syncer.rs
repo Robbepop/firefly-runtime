@@ -58,6 +58,18 @@ impl<'a> FrameSyncer<'a> {
         input
     }
 
+    /// Get the combined random seed of all peers.
+    pub fn get_seed(&self) -> u32 {
+        let mut seed = 0;
+        for peer in &self.peers {
+            let state = peer.states.get_current();
+            if let Some(state) = state {
+                seed ^= state.rand;
+            };
+        }
+        seed
+    }
+
     pub fn update(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
         let now = device.now();
         if now - self.last_advance.unwrap() > FRAME_TIMEOUT {

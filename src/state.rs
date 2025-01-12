@@ -366,7 +366,21 @@ impl<'a> State<'a> {
     }
 
     fn update_syncer<'b>(&mut self, mut syncer: FrameSyncer<'b>) -> NetHandler<'b> {
-        let frame_state = self.frame_state();
+        let input = self.input.clone().unwrap_or_default();
+        // Sync random seed only once a second to avoid poking true RNG too often.
+        let sync_rand = syncer.frame % 60 == 21;
+        let rand = if sync_rand { self.device.random() } else { 0 };
+        let frame_state = FrameState {
+            // No need to set frame number here,
+            // it will be set by FrameSyncer.advance.
+            frame: 0,
+            rand,
+            input: Input {
+                pad: input.pad.map(Into::into),
+                buttons: input.buttons,
+            },
+        };
+
         syncer.advance(&self.device, frame_state);
         while !syncer.ready() {
             let res = syncer.update(&self.device);
@@ -374,6 +388,12 @@ impl<'a> State<'a> {
                 self.device.log_error("netcode", err);
                 self.exit = true;
                 return NetHandler::None;
+            }
+        }
+        if sync_rand {
+            let seed = syncer.get_seed();
+            if seed != 0 {
+                self.seed = seed;
             }
         }
         NetHandler::FrameSyncer(syncer)
@@ -418,20 +438,6 @@ impl<'a> State<'a> {
         let net = self.device.network();
         self.net_handler
             .set(NetHandler::Connector(Connector::new(me, net)));
-    }
-
-    fn frame_state(&self) -> FrameState {
-        let input = self.input.clone().unwrap_or_default();
-        FrameState {
-            // No need to set frame number here,
-            // it will be set by FrameSyncer.advance.
-            frame: 0,
-            rand: self.seed,
-            input: Input {
-                pad: input.pad.map(Into::into),
-                buttons: input.buttons,
-            },
-        }
     }
 
     /// Log an error/warning occured in the currently executing host function.
