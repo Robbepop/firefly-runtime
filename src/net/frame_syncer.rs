@@ -27,6 +27,7 @@ pub(crate) struct FSPeer {
 pub(crate) struct FrameSyncer<'a> {
     pub frame: u32,
     pub peers: heapless::Vec<FSPeer, MAX_PEERS>,
+    pub initial_seed: u32,
     pub(super) last_sync: Option<Instant>,
     pub(super) last_advance: Option<Instant>,
     pub(super) net: NetworkImpl<'a>,

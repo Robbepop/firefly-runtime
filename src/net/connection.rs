@@ -35,8 +35,10 @@ pub(crate) struct AppIntro {
     badges: Box<[u16]>,
     /// The peer's top score for each board.
     scores: Box<[i16]>,
-    /// The peer's stash, shared state preserved across games.
+    /// The peer's stash: a shared state preserved across games.
     pub stash: alloc::vec::Vec<u8>,
+    /// The peer's true RNG seed.
+    pub seed: u32,
 }
 
 pub(crate) enum ConnectionStatus {
@@ -61,6 +63,7 @@ pub(crate) struct Connection<'a> {
     /// Later, when the app to be launched is known, contains the id of the app to launch
     /// and the intro moves into [`Peer`] corresponding to the local device.
     pub app: Option<FullID>,
+    pub seed: Option<u32>,
     pub peers: heapless::Vec<Peer, MAX_PEERS>,
     pub(super) net: NetworkImpl<'a>,
     /// The last time when the device checked if other devices are ready to start.
@@ -99,12 +102,29 @@ impl<'a> Connection<'a> {
             badges: intro.badges.clone(),
             scores: intro.scores.clone(),
             stash: intro.stash.clone().into(),
+            seed: intro.seed,
         });
         self.broadcast(resp.into())?;
         self.app = Some(app);
         let me = self.get_me_mut();
         me.intro = Some(intro);
         Ok(())
+    }
+
+    /// The initial seed that must be used when starting the app.
+    ///
+    /// When called for the first time, will fetch a random value from
+    /// the device's true RNG. After that, will cache the value
+    /// to ensure it's the same in all intros.
+    fn get_seed(&mut self, device: &mut DeviceImpl) -> u32 {
+        match self.seed {
+            Some(seed) => seed,
+            None => {
+                let seed = device.random();
+                self.seed = Some(seed);
+                seed
+            }
+        }
     }
 
     fn make_intro(
@@ -127,6 +147,7 @@ impl<'a> Connection<'a> {
         };
 
         let stats_path = &["data", id.author(), id.app(), "stats"];
+        let seed = self.get_seed(device);
         let stream = match device.open_file(stats_path) {
             Ok(stream) => stream,
             Err(FSError::NotFound) => {
@@ -134,6 +155,7 @@ impl<'a> Connection<'a> {
                     badges: Box::new([]),
                     scores: Box::new([]),
                     stash,
+                    seed,
                 });
             }
             Err(err) => return Err(NetcodeError::StatsFileError(err)),
@@ -164,12 +186,14 @@ impl<'a> Connection<'a> {
             badges: badges.into_boxed_slice(),
             scores: scores.into_boxed_slice(),
             stash,
+            seed,
         };
         Ok(intro)
     }
 
     pub(crate) fn finalize(self, device: &mut DeviceImpl) -> FrameSyncer<'a> {
         let mut peers = heapless::Vec::<FSPeer, 8>::new();
+        let mut seed = 0;
         for peer in self.peers {
             let intro = peer.intro.unwrap();
             let friend_id = if peer.addr.is_none() {
@@ -190,6 +214,7 @@ impl<'a> Connection<'a> {
                 stash: intro.stash,
             };
             peers.push(peer).ok().unwrap();
+            seed ^= intro.seed;
         }
         FrameSyncer {
             peers,
@@ -197,6 +222,7 @@ impl<'a> Connection<'a> {
             last_sync: None,
             frame: 0,
             last_advance: None,
+            initial_seed: seed,
         }
     }
 
@@ -242,6 +268,7 @@ impl<'a> Connection<'a> {
             badges: intro.badges.clone(),
             scores: intro.scores.clone(),
             stash: intro.stash.clone().into_boxed_slice(),
+            seed: intro.seed,
         });
         self.broadcast(resp.into())?;
         Ok(())
@@ -305,6 +332,7 @@ impl<'a> Connection<'a> {
             badges: intro.badges.clone(),
             scores: intro.scores.clone(),
             stash: intro.stash.clone().into_boxed_slice(),
+            seed: intro.seed,
         };
         let resp = Message::Resp(resp.into());
         let mut buf = alloc::vec![0u8; MSG_SIZE];
@@ -342,6 +370,7 @@ impl<'a> Connection<'a> {
                 badges: intro.badges,
                 scores: intro.scores,
                 stash: intro.stash.to_vec(),
+                seed: intro.seed,
             });
         };
         Ok(())

@@ -112,6 +112,8 @@ pub(crate) struct Start {
     pub scores: Box<[i16]>,
     /// The peer's stash, shared state preserved across games.
     pub stash: Box<[u8]>,
+    /// The random seed to be used at the app startup.
+    pub seed: u32,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize)]

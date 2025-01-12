@@ -98,6 +98,7 @@ impl<'a> Connector<'a> {
             net: self.net,
             last_sync: None,
             last_ready: None,
+            seed: None,
         }
     }
 

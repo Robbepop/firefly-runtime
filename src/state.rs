@@ -86,6 +86,13 @@ impl<'a> State<'a> {
         launcher: bool,
     ) -> Self {
         let offline = matches!(net_handler, NetHandler::None);
+        let seed = match &net_handler {
+            NetHandler::FrameSyncer(syncer) => syncer.initial_seed,
+            _ => {
+                device.log_debug("init", "using the default seed");
+                0
+            }
+        };
         Self {
             device,
             id,
@@ -93,7 +100,7 @@ impl<'a> State<'a> {
             canvas: None,
             menu: Menu::new(offline, launcher),
             audio: firefly_audio::Manager::new(),
-            seed: 0,
+            seed,
             lock_seed: false,
             memory: None,
             next: None,
