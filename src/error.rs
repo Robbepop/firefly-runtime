@@ -29,7 +29,29 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Wasmi(err) => write!(f, "wasm error: {err}"),
+            Error::Wasmi(err) => {
+                write!(f, "wasm error: ")?;
+                use wasmi::errors::ErrorKind::*;
+                match err.kind() {
+                    TrapCode(_) => write!(f, "trap code: {err}"),
+                    Message(_) => write!(f, "message: {err}"),
+                    I32ExitStatus(_) => write!(f, "exit status: {err}"),
+                    Host(_) => write!(f, "host: {err}"),
+                    Global(_) => write!(f, "global: {err}"),
+                    Memory(_) => write!(f, "memory: {err}"),
+                    Table(_) => write!(f, "table: {err}"),
+                    Linker(_) => write!(f, "linker: {err}"),
+                    Instantiation(_) => write!(f, "instantiation: {err}"),
+                    Fuel(_) => write!(f, "fuel: {err}"),
+                    Func(_) => write!(f, "func: {err}"),
+                    Read(_) => write!(f, "read: {err}"),
+                    Wasm(_) => write!(f, "parse: {err}"),
+                    Translation(_) => write!(f, "translation: {err}"),
+                    Limits(_) => write!(f, "limits: {err}"),
+                    Ir(_) => write!(f, "IR: {err}"),
+                    _ => write!(f, "unknown: {err}"),
+                }
+            }
             Error::FileEmpty(s) => write!(f, "file is empty: {s}"),
             Error::OpenFile(s, e) => write!(f, "cannot open {s}: {e}"),
             Error::NoLauncher => write!(f, "no launcher installed"),
