@@ -13,7 +13,7 @@ use firefly_hal::*;
 use firefly_types::*;
 
 /// Default frames per second.
-const FPS: u32 = 60;
+const FPS: u8 = 60;
 const KB: u32 = 1024;
 const FUEL_PER_CALL: u64 = 1_000_000;
 
@@ -25,6 +25,7 @@ where
     display: D,
     instance: wasmi::Instance,
     store: wasmi::Store<State<'a>>,
+
     update: Option<wasmi::TypedFunc<(), ()>>,
     render: Option<wasmi::TypedFunc<(), ()>>,
     before_exit: Option<wasmi::TypedFunc<(), ()>>,
@@ -36,6 +37,10 @@ where
     per_frame: Duration,
     /// The last time when the frame was updated.
     prev_time: Instant,
+    n_frames: u8,
+    lagging_frames: u8,
+    fast_frames: u8,
+    render_every: u8,
 
     stats: Option<StatsTracker>,
     serial: SerialImpl,
@@ -129,7 +134,11 @@ where
             handle_menu: None,
             render_line: None,
             stats: None,
-            per_frame: Duration::from_fps(FPS),
+            per_frame: Duration::from_fps(u32::from(FPS)),
+            n_frames: 0,
+            lagging_frames: 0,
+            fast_frames: 0,
+            render_every: 1,
             prev_time: now,
             serial,
         };
@@ -226,6 +235,9 @@ where
 
         // TODO: continue execution even if an update fails.
         let fuel_update = self.call_callback("update", self.update)?;
+        if let Some(stats) = &mut self.stats {
+            stats.update_fuel.add(fuel_update);
+        }
         {
             let state = self.store.data_mut();
             let audio_buf = state.device.get_audio_buffer();
@@ -233,13 +245,25 @@ where
                 state.audio.write(audio_buf);
             }
         }
-        let fuel_render = self.call_callback("render", self.render)?;
-        if let Some(stats) = &mut self.stats {
-            stats.update_fuel.add(fuel_update);
-            stats.render_fuel.add(fuel_render);
+        self.n_frames = (self.n_frames + 1) % (FPS * 4);
+        if self.fast_frames >= FPS {
+            self.render_every = (self.render_every - 1).max(1);
+            self.fast_frames = 0;
+        } else if self.lagging_frames >= FPS {
+            self.render_every = (self.render_every + 1).min(8);
+            self.lagging_frames = 0;
         }
         self.delay();
-        self.flush_frame()?;
+        let should_render = self.n_frames % self.render_every == 0;
+        if should_render {
+            let fuel_render = self.call_callback("render", self.render)?;
+            if let Some(stats) = &mut self.stats {
+                stats.render_fuel.add(fuel_render);
+            }
+        }
+        if should_render {
+            self.flush_frame()?;
+        }
         let state = self.store.data();
         Ok(state.exit)
     }
@@ -255,8 +279,14 @@ where
                 stats.delays += delay;
             }
             state.device.delay(delay);
-        } else if let Some(stats) = &mut self.stats {
-            stats.lags += elapsed - self.per_frame;
+            self.fast_frames = (self.fast_frames + 1) % (FPS * 4);
+            self.lagging_frames = 0;
+        } else {
+            if let Some(stats) = &mut self.stats {
+                stats.lags += elapsed - self.per_frame;
+            }
+            self.lagging_frames = (self.lagging_frames + 1) % (FPS * 4);
+            self.fast_frames = 0;
         }
         self.prev_time = state.device.now();
     }

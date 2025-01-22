@@ -145,7 +145,7 @@ impl FrameBuffer {
         C: RgbColor + FromRGB,
         D: DrawTarget<Color = C, Error = E>,
     {
-        self.draw_range(target, 0, HEIGHT + 1)
+        self.draw_range(target, 0, HEIGHT)
     }
 
     pub(crate) fn draw_range<D, C, E>(
