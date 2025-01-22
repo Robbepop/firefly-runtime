@@ -138,7 +138,7 @@ where
             n_frames: 0,
             lagging_frames: 0,
             fast_frames: 0,
-            render_every: 1,
+            render_every: 2,
             prev_time: now,
             serial,
         };
