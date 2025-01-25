@@ -184,7 +184,7 @@ impl Menu {
         self.active = true
     }
 
-    pub fn render<D, C, E>(&self, display: &mut D) -> Result<(), E>
+    pub fn render<D, C, E>(&mut self, display: &mut D) -> Result<(), E>
     where
         D: DrawTarget<Color = C, Error = E> + OriginDimensions,
         C: RgbColor + FromRGB,
@@ -192,6 +192,7 @@ impl Menu {
         if self.rendered {
             return Ok(());
         }
+        self.rendered = true;
         let corners = CornerRadii::new(Size::new_equal(4));
         let white = convert_color::<C>(0xf4, 0xf4, 0xf4);
         let black = convert_color::<C>(0x1a, 0x1c, 0x2c);
