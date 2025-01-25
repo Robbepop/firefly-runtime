@@ -33,7 +33,7 @@ pub(crate) struct FrameSyncer<'a> {
     pub(super) net: NetworkImpl<'a>,
 }
 
-impl<'a> FrameSyncer<'a> {
+impl FrameSyncer<'_> {
     /// Check if we have the state of the current frame for all connected peers.
     pub fn ready(&self) -> bool {
         for peer in &self.peers {

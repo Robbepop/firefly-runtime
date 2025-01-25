@@ -93,12 +93,13 @@ where
         let bin_path = &["roms", id.author(), id.app(), "_bin"];
         let engine = {
             let mut wasmi_config = wasmi::Config::default();
+            wasmi_config.ignore_custom_sections(true);
             wasmi_config.consume_fuel(true);
             if let Ok(bin_size) = config.device.get_file_size(bin_path) {
                 if bin_size == 0 {
                     return Err(Error::FileEmpty(bin_path.join("/")));
                 }
-                if bin_size > 200 * KB {
+                if bin_size > 40 * KB {
                     wasmi_config.compilation_mode(wasmi::CompilationMode::Lazy);
                 }
             }
