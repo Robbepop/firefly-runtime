@@ -51,7 +51,14 @@ pub(crate) struct ConnectScene {
     frame: usize,
     buttons: Buttons,
     stopped: bool,
+    /// The hash of the scene state. If hash changes, scene needs to be re-rendered.
     hash: usize,
+    /// True if the scene was rendered at least once.
+    ///
+    /// We also set it to false when the scan for device is stopped
+    /// to force clearing the screen. It's needed because the scene
+    /// in these states is slightly different.
+    rendered: bool,
 }
 
 impl ConnectScene {
@@ -61,6 +68,7 @@ impl ConnectScene {
             buttons: Buttons::new(&None),
             stopped: false,
             hash: 0,
+            rendered: false,
         }
     }
 
@@ -85,6 +93,7 @@ impl ConnectScene {
         // but is released now. Stop connecting.
         if !self.stopped && old_buttons.any {
             self.stopped = true;
+            self.rendered = false;
             return Some(ConnectStatus::Stopped);
         }
 
@@ -111,7 +120,9 @@ impl ConnectScene {
             return Ok(());
         }
         self.hash = hash;
-        self.render_inner(connector, display)
+        let res = self.render_inner(connector, display);
+        self.rendered = true;
+        res
     }
 
     /// Show the connector state.
@@ -120,7 +131,9 @@ impl ConnectScene {
         D: DrawTarget<Color = C, Error = E> + OriginDimensions,
         C: RgbColor + FromRGB,
     {
-        display.clear(C::BG)?;
+        if !self.rendered {
+            display.clear(C::BG)?;
+        }
 
         // Render gray "Connecting..." message
         if !self.stopped {
