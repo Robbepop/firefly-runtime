@@ -65,31 +65,36 @@ where
 
 /// Create RGB (or BGR) color from R, G, and B components in 0-255 range.
 pub trait FromRGB {
+    /// The white background color.
+    const BG: Self;
+
     fn from_rgb(r: u8, g: u8, b: u8) -> Self;
 }
 
 impl FromRGB for Rgb565 {
+    const BG: Self = new_rgb565(0xf4, 0xf4, 0xf4);
+
     fn from_rgb(r: u8, g: u8, b: u8) -> Self {
-        let r = r as u32 * Self::MAX_R as u32 / Rgb888::MAX_R as u32;
-        let g = g as u32 * Self::MAX_G as u32 / Rgb888::MAX_G as u32;
-        let b = b as u32 * Self::MAX_B as u32 / Rgb888::MAX_B as u32;
-        debug_assert!(r < 256);
-        debug_assert!(g < 256);
-        debug_assert!(b < 256);
-        Self::new(r as u8, g as u8, b as u8)
+        new_rgb565(r, g, b)
     }
 }
 
 impl FromRGB for Rgb888 {
+    const BG: Self = Self::new(0xf4, 0xf4, 0xf4);
+
     fn from_rgb(r: u8, g: u8, b: u8) -> Self {
-        let r = r as u32 * Self::MAX_R as u32 / Rgb888::MAX_R as u32;
-        let g = g as u32 * Self::MAX_G as u32 / Rgb888::MAX_G as u32;
-        let b = b as u32 * Self::MAX_B as u32 / Rgb888::MAX_B as u32;
-        debug_assert!(r < 256);
-        debug_assert!(g < 256);
-        debug_assert!(b < 256);
-        Self::new(r as u8, g as u8, b as u8)
+        Self::new(r, g, b)
     }
+}
+
+const fn new_rgb565(r: u8, g: u8, b: u8) -> Rgb565 {
+    let r = r as u32 * Rgb565::MAX_R as u32 / Rgb888::MAX_R as u32;
+    let g = g as u32 * Rgb565::MAX_G as u32 / Rgb888::MAX_G as u32;
+    let b = b as u32 * Rgb565::MAX_B as u32 / Rgb888::MAX_B as u32;
+    debug_assert!(r < 256);
+    debug_assert!(g < 256);
+    debug_assert!(b < 256);
+    Rgb565::new(r as u8, g as u8, b as u8)
 }
 
 #[allow(clippy::get_first)]

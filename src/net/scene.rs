@@ -122,17 +122,13 @@ impl ConnectScene {
         C: RgbColor + FromRGB,
     {
         let black = C::from_rgb(0x1a, 0x1c, 0x2c);
-
-        {
-            let white = C::from_rgb(0xf4, 0xf4, 0xf4);
-            display.clear(white)?;
-        }
+        display.clear(C::BG)?;
 
         // Render gray "Connecting..." message
         if !self.stopped {
             let gray = C::from_rgb(0x94, 0xb0, 0xc2);
             let mut text_style = MonoTextStyle::new(&FONT_6X9, gray);
-            text_style.background_color = Some(C::WHITE);
+            text_style.background_color = Some(C::BG);
             let point = Point::new(X, Y - FONT_HEIGHT);
             let text = "Connecting...";
             let text = Text::new(text, point, text_style);
@@ -144,7 +140,7 @@ impl ConnectScene {
         if !self.stopped {
             let quarter_second = self.frame / 15;
             let mut text_style = MonoTextStyle::new(&FONT_6X9, black);
-            text_style.background_color = Some(C::WHITE);
+            text_style.background_color = Some(C::BG);
             let text = "Connecting...";
             let (shift, text) = if quarter_second % 28 >= 14 {
                 (quarter_second as i32 % 14, &text[quarter_second % 14..])
@@ -160,7 +156,7 @@ impl ConnectScene {
         {
             let point = Point::new(X, Y);
             let mut text_style = MonoTextStyle::new(&FONT_6X9, black);
-            text_style.background_color = Some(C::WHITE);
+            text_style.background_color = Some(C::BG);
             let text = Text::new("you:", point, text_style);
             text.draw(display)?;
         }
@@ -168,7 +164,7 @@ impl ConnectScene {
             let blue = C::from_rgb(0x3b, 0x5d, 0xc9);
             let point = Point::new(X + FONT_WIDTH * 5, Y);
             let mut text_style = MonoTextStyle::new(&FONT_6X9, blue);
-            text_style.background_color = Some(C::WHITE);
+            text_style.background_color = Some(C::BG);
             let text = if connector.me.name.is_empty() {
                 "<empty>"
             } else {
@@ -184,7 +180,7 @@ impl ConnectScene {
         {
             let gray = C::from_rgb(0x94, 0xb0, 0xc2);
             let mut text_style = MonoTextStyle::new(&FONT_6X9, gray);
-            text_style.background_color = Some(C::WHITE);
+            text_style.background_color = Some(C::BG);
             let text = if self.stopped {
                 "press S to continue / E to cancel"
             } else {
@@ -207,7 +203,7 @@ impl ConnectScene {
     {
         let blue = C::from_rgb(0x3b, 0x5d, 0xc9);
         let mut text_style = MonoTextStyle::new(&FONT_6X9, blue);
-        text_style.background_color = Some(C::WHITE);
+        text_style.background_color = Some(C::BG);
         let mut addrs = connector.peer_addrs().clone();
         let peers = connector.peer_infos();
         let peer_count = peers.len() as i32;
