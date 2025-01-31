@@ -4,7 +4,7 @@ use alloc::boxed::Box;
 use firefly_hal::*;
 
 const SYNC_EVERY: Duration = Duration::from_ms(5);
-const FRAME_TIMEOUT: Duration = Duration::from_ms(100);
+const FRAME_TIMEOUT: Duration = Duration::from_ms(5000);
 const MAX_PEERS: usize = 8;
 const MSG_SIZE: usize = 64;
 
