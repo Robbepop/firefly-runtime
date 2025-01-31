@@ -16,6 +16,7 @@ const LINE_HEIGHT: i32 = 12;
 pub(crate) enum MenuItem {
     Custom(u8, alloc::string::String),
     Connect,
+    Disconnect,
     ScreenShot,
     Restart,
     Quit,
@@ -26,6 +27,7 @@ impl MenuItem {
         match self {
             MenuItem::Custom(_, t) => t,
             MenuItem::Connect => "start multiplayer",
+            MenuItem::Disconnect => "exit multiplayer",
             MenuItem::ScreenShot => "take screenshot",
             MenuItem::Restart => "restart app",
             MenuItem::Quit => "exit app",
@@ -65,8 +67,12 @@ pub(crate) struct Menu {
 impl Menu {
     pub fn new(offline: bool, launcher: bool) -> Self {
         let mut items = heapless::Vec::new();
-        if offline && launcher {
-            _ = items.push(MenuItem::Connect);
+        if launcher {
+            if offline {
+                _ = items.push(MenuItem::Connect);
+            } else {
+                _ = items.push(MenuItem::Disconnect);
+            }
         }
         _ = items.push(MenuItem::ScreenShot);
         if !launcher {

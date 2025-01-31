@@ -313,6 +313,7 @@ impl<'a> State<'a> {
             match action {
                 MenuItem::Custom(index, _) => return Some(*index),
                 MenuItem::Connect => self.connect(),
+                MenuItem::Disconnect => self.disconnect(),
                 MenuItem::ScreenShot => self.take_screenshot(),
                 MenuItem::Restart => self.set_next(self.id.clone()),
                 // TODO: quit the app for everyone
@@ -339,14 +340,14 @@ impl<'a> State<'a> {
             return NetHandler::Connector(connector);
         };
         let conn_status = scene.update(&self.input);
-        let Some(mut conn_status) = conn_status else {
+        let Some(conn_status) = conn_status else {
             return NetHandler::Connector(connector);
         };
         // If the peers list contains only the current device itself,
         // we can't start multiplayer: treat confirmation as cancellation.
-        if conn_status == ConnectStatus::Finished && connector.peer_infos().len() <= 1 {
-            conn_status = ConnectStatus::Cancelled;
-        }
+        // if conn_status == ConnectStatus::Finished && connector.peer_infos().len() <= 1 {
+        //     conn_status = ConnectStatus::Cancelled;
+        // }
         match conn_status {
             ConnectStatus::Stopped => {
                 let res = connector.pause();
@@ -365,6 +366,8 @@ impl<'a> State<'a> {
             }
             ConnectStatus::Finished => {
                 self.connect_scene = None;
+                // Re-render menu with "disconnect" button instead of "connect".
+                self.menu = Menu::new(false, true);
                 let connection = connector.finalize();
                 NetHandler::Connection(connection)
             }
@@ -460,6 +463,19 @@ impl<'a> State<'a> {
         let net = self.device.network();
         self.net_handler
             .set(NetHandler::Connector(Connector::new(me, net)));
+    }
+
+    fn disconnect(&mut self) {
+        self.connect_scene = None;
+        let net_handler = self.net_handler.replace(NetHandler::None);
+        if let NetHandler::Connection(conn) = net_handler {
+            let res = conn.disconnect();
+            if let Err(err) = res {
+                self.device.log_error("netcode", err);
+            }
+        }
+        // Re-render menu with "disconnect" replaced by "connect".
+        self.menu = Menu::new(true, true);
     }
 
     /// Log an error/warning occured in the currently executing host function.

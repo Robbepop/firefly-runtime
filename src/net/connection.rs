@@ -88,6 +88,13 @@ impl<'a> Connection<'a> {
         }
     }
 
+    /// Disconnect from multiplayer.
+    ///
+    /// Can be called from menu in launcher if connected to multiplayer.
+    pub fn disconnect(mut self) -> Result<(), NetworkError> {
+        self.net.stop()
+    }
+
     pub fn set_app(&mut self, device: &mut DeviceImpl, app: FullID) -> Result<(), NetcodeError> {
         if self.app.is_some() {
             // App already was picked, cannot pick a new one.
