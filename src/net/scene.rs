@@ -15,6 +15,7 @@ const FONT_WIDTH: i32 = 6;
 const X: i32 = 120 - 3 * 13;
 const Y: i32 = 71;
 
+#[derive(PartialEq)]
 pub(crate) enum ConnectStatus {
     /// Stopped listening, [Connector] should do nothing.
     Stopped,
@@ -190,7 +191,11 @@ impl ConnectScene {
             let mut text_style = MonoTextStyle::new(&FONT_6X9, C::MUTED);
             text_style.background_color = Some(C::BG);
             let text = if self.stopped {
-                "press S to continue / E to cancel"
+                if connector.peer_infos().len() <= 1 {
+                    "press E to cancel"
+                } else {
+                    "press S to continue / E to cancel"
+                }
             } else {
                 "(press any button to stop)"
             };
