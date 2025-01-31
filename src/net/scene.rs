@@ -191,7 +191,7 @@ impl ConnectScene {
             let mut text_style = MonoTextStyle::new(&FONT_6X9, C::MUTED);
             text_style.background_color = Some(C::BG);
             let text = if self.stopped {
-                if connector.peer_infos().len() <= 1 {
+                if connector.peer_infos().is_empty() {
                     "press E to cancel"
                 } else {
                     "press S to continue / E to cancel"

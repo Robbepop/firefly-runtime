@@ -340,14 +340,14 @@ impl<'a> State<'a> {
             return NetHandler::Connector(connector);
         };
         let conn_status = scene.update(&self.input);
-        let Some(conn_status) = conn_status else {
+        let Some(mut conn_status) = conn_status else {
             return NetHandler::Connector(connector);
         };
         // If the peers list contains only the current device itself,
         // we can't start multiplayer: treat confirmation as cancellation.
-        // if conn_status == ConnectStatus::Finished && connector.peer_infos().len() <= 1 {
-        //     conn_status = ConnectStatus::Cancelled;
-        // }
+        if conn_status == ConnectStatus::Finished && connector.peer_infos().is_empty() {
+            conn_status = ConnectStatus::Cancelled;
+        }
         match conn_status {
             ConnectStatus::Stopped => {
                 let res = connector.pause();
