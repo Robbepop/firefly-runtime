@@ -86,7 +86,7 @@ impl FrameSyncer<'_> {
     /// Go to the next frame and set that frame's state.
     ///
     /// It will also broadcast the new frame state to all connected peers.
-    pub fn advance(&mut self, device: &DeviceImpl, mut state: FrameState) {
+    pub fn advance(&mut self, device: &mut DeviceImpl, mut state: FrameState) {
         self.frame += 1;
 
         // Set the frame state for the local peer.
@@ -111,6 +111,9 @@ impl FrameSyncer<'_> {
         };
         for peer in &mut self.peers {
             if let Some(addr) = peer.addr {
+                // Random jitter to avoid all devices transmitting at the same time.
+                let delay_us = device.random() % 4;
+                device.delay(Duration::from_us(delay_us));
                 let res = self.net.send(addr, raw);
                 if let Err(err) = res {
                     device.log_error("netcode", err);

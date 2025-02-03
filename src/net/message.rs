@@ -38,7 +38,6 @@ impl Message {
         }
     }
 
-    // TODO: return NetworkError
     pub fn encode<'a>(&self, buf: &'a mut [u8]) -> Result<&'a mut [u8], NetcodeError> {
         let res = postcard::to_slice(self, buf);
         match res {

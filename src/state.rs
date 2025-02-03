@@ -406,7 +406,7 @@ impl<'a> State<'a> {
             },
         };
 
-        syncer.advance(&self.device, frame_state);
+        syncer.advance(&mut self.device, frame_state);
         while !syncer.ready() {
             let res = syncer.update(&self.device);
             if let Err(err) = res {
