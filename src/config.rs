@@ -45,7 +45,7 @@ impl fmt::Display for FullIDError {
 }
 
 /// The author and app ID combo. Must be unique. Cannot be changed.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Clone, Serialize, Deserialize)]
 pub struct FullID {
     author: String<16>,
     app: String<16>,

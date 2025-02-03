@@ -395,6 +395,11 @@ impl<'a> State<'a> {
         let rand = if sync_rand { self.device.random() } else { 0 };
 
         let input = self.input.clone().unwrap_or_default();
+        let action = match &self.next {
+            Some(id) if id == &self.id => Action::Restart,
+            Some(_) => Action::Exit,
+            None => Action::None,
+        };
         let frame_state = FrameState {
             // No need to set frame number here,
             // it will be set by FrameSyncer.advance.
@@ -404,6 +409,7 @@ impl<'a> State<'a> {
                 pad: input.pad.map(Into::into),
                 buttons: input.buttons,
             },
+            action,
         };
 
         syncer.advance(&mut self.device, frame_state);
