@@ -9,8 +9,8 @@ use firefly_hal::*;
 use firefly_types::{Encode, Stats};
 use ring::RingBuf;
 
-const SYNC_EVERY: Duration = Duration::from_ms(100);
-const READY_EVERY: Duration = Duration::from_ms(100);
+const SYNC_EVERY: Duration = Duration::from_ms(20);
+const READY_EVERY: Duration = Duration::from_ms(20);
 const MAX_PEERS: usize = 8;
 const MSG_SIZE: usize = 64;
 
