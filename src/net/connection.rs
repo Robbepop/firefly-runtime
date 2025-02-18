@@ -9,8 +9,8 @@ use firefly_hal::*;
 use firefly_types::{Encode, Stats};
 use ring::RingBuf;
 
-const SYNC_EVERY: Duration = Duration::from_ms(80);
-const READY_EVERY: Duration = Duration::from_ms(20);
+const SYNC_EVERY: Duration = Duration::from_ms(100);
+const READY_EVERY: Duration = Duration::from_ms(100);
 const MAX_PEERS: usize = 8;
 const MSG_SIZE: usize = 64;
 
@@ -19,7 +19,7 @@ pub(crate) struct Peer {
     pub addr: Option<Addr>,
     /// The human-readable name of the device.
     pub name: heapless::String<16>,
-    /// Not None when the peer is ready to start teh selected app.
+    /// Not None when the peer is ready to start the selected app.
     pub intro: Option<AppIntro>,
 }
 
@@ -102,7 +102,8 @@ impl<'a> Connection<'a> {
             // TODO: Broadcast an error if the new app doesn't match the old one.
             return Ok(());
         };
-        let intro = self.make_intro(device, &app)?;
+        let seed = self.get_seed(device);
+        let intro = make_intro(device, &app, seed)?;
         // TODO: reduce the amount of `.clone()` in this function.
         let resp = Resp::Start(Start {
             id: app.clone(),
@@ -132,70 +133,6 @@ impl<'a> Connection<'a> {
                 seed
             }
         }
-    }
-
-    fn make_intro(
-        &mut self,
-        device: &mut DeviceImpl,
-        id: &FullID,
-    ) -> Result<AppIntro, NetcodeError> {
-        let me = self.get_me_mut();
-        debug_assert!(me.intro.is_none());
-
-        // read stash file
-        let stash_path = &["data", id.author(), id.app(), "stash"];
-        let stash = match device.open_file(stash_path) {
-            Ok(stream) => match read_all(stream) {
-                Ok(stream) => stream,
-                Err(err) => return Err(NetcodeError::StashFileError(err.into())),
-            },
-            Err(FSError::NotFound) => alloc::vec::Vec::new(),
-            Err(err) => return Err(NetcodeError::StashFileError(err)),
-        };
-
-        let stats_path = &["data", id.author(), id.app(), "stats"];
-        let seed = self.get_seed(device);
-        let stream = match device.open_file(stats_path) {
-            Ok(stream) => stream,
-            Err(FSError::NotFound) => {
-                return Ok(AppIntro {
-                    badges: Box::new([]),
-                    scores: Box::new([]),
-                    stash,
-                    seed,
-                });
-            }
-            Err(err) => return Err(NetcodeError::StatsFileError(err)),
-        };
-        let Ok(raw) = read_all(stream) else {
-            return Err(NetcodeError::StatsError("cannot read stats file"));
-        };
-        if raw.is_empty() {
-            return Err(NetcodeError::StatsError("file is empty"));
-        }
-        let stats = match Stats::decode(&raw) {
-            Ok(stats) => stats,
-            Err(_) => {
-                return Err(NetcodeError::StatsError("cannot decode stats"));
-            }
-        };
-
-        let mut badges = alloc::vec::Vec::new();
-        let mut scores = alloc::vec::Vec::new();
-        for badge in stats.badges {
-            badges.push(badge.done);
-        }
-        for score in stats.scores {
-            scores.push(score.me[0]);
-        }
-
-        let intro = AppIntro {
-            badges: badges.into_boxed_slice(),
-            scores: scores.into_boxed_slice(),
-            stash,
-            seed,
-        };
-        Ok(intro)
     }
 
     pub(crate) fn finalize(self, device: &mut DeviceImpl) -> FrameSyncer<'a> {
@@ -236,7 +173,7 @@ impl<'a> Connection<'a> {
     fn update_inner(&mut self, device: &mut DeviceImpl) -> Result<(), NetcodeError> {
         let now = device.now();
         self.sync(now)?;
-        self.ready(now)?;
+        self.send_ready(now)?;
         if let Some((addr, msg)) = self.net.recv()? {
             self.handle_message(device, addr, msg)?;
         }
@@ -256,7 +193,7 @@ impl<'a> Connection<'a> {
     }
 
     /// Tell other devices if we are ready to start.
-    fn ready(&mut self, now: Instant) -> Result<(), NetcodeError> {
+    fn send_ready(&mut self, now: Instant) -> Result<(), NetcodeError> {
         // Say we're ready only if we are actually ready:
         // if we know the next app to launch.
         let Some(app) = &self.app else {
@@ -444,4 +381,64 @@ fn get_friend_id(device: &mut DeviceImpl, device_name: &str) -> Option<u16> {
     stream.write(&[device_name.len() as u8]).ok()?;
     write_all(stream, device_name).ok()?;
     Some(i + 1)
+}
+
+pub(crate) fn make_intro(
+    device: &mut DeviceImpl,
+    id: &FullID,
+    seed: u32,
+) -> Result<AppIntro, NetcodeError> {
+    // read stash file
+    let stash_path = &["data", id.author(), id.app(), "stash"];
+    let stash = match device.open_file(stash_path) {
+        Ok(stream) => match read_all(stream) {
+            Ok(stream) => stream,
+            Err(err) => return Err(NetcodeError::StashFileError(err.into())),
+        },
+        Err(FSError::NotFound) => alloc::vec::Vec::new(),
+        Err(err) => return Err(NetcodeError::StashFileError(err)),
+    };
+
+    let stats_path = &["data", id.author(), id.app(), "stats"];
+    let stream = match device.open_file(stats_path) {
+        Ok(stream) => stream,
+        Err(FSError::NotFound) => {
+            return Ok(AppIntro {
+                badges: Box::new([]),
+                scores: Box::new([]),
+                stash,
+                seed,
+            });
+        }
+        Err(err) => return Err(NetcodeError::StatsFileError(err)),
+    };
+    let Ok(raw) = read_all(stream) else {
+        return Err(NetcodeError::StatsError("cannot read stats file"));
+    };
+    if raw.is_empty() {
+        return Err(NetcodeError::StatsError("file is empty"));
+    }
+    let stats = match Stats::decode(&raw) {
+        Ok(stats) => stats,
+        Err(_) => {
+            return Err(NetcodeError::StatsError("cannot decode stats"));
+        }
+    };
+
+    let mut badges = alloc::vec::Vec::new();
+    let mut scores = alloc::vec::Vec::new();
+    for badge in stats.badges {
+        badges.push(badge.done);
+    }
+    for score in stats.scores {
+        scores.push(score.me[0]);
+    }
+
+    let intro = AppIntro {
+        badges: badges.into_boxed_slice(),
+        scores: scores.into_boxed_slice(),
+        stash,
+        seed,
+    };
+    Ok(intro)
 }
