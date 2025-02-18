@@ -82,6 +82,7 @@ impl<'a> Connection<'a> {
         if let Some(started_at) = self.started_at {
             let now = device.now();
             if now - started_at > START_TIMEOUT {
+                self.started_at = None; // don't do timeout check if update called again
                 return ConnectionStatus::Timeout;
             }
         }
@@ -291,7 +292,7 @@ impl<'a> Connection<'a> {
             stash: intro.stash.clone().into_boxed_slice(),
             seed: intro.seed,
         };
-        let resp = Message::Resp(resp.into());
+        let resp = Message::Resp(Resp::Start(resp));
         let mut buf = alloc::vec![0u8; MSG_SIZE];
         let raw = resp.encode(&mut buf)?;
         self.net.send(addr, raw)?;

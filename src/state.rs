@@ -388,6 +388,7 @@ impl<'a> State<'a> {
             ConnectionStatus::Timeout => {
                 let msg = "timed out waiting for other devices to launch the app";
                 self.device.log_error("netcode", msg);
+                self.exit = true;
                 return NetHandler::None;
             }
             _ => (),
