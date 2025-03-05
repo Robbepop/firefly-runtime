@@ -47,6 +47,10 @@ impl<'a> FrameSyncer<'a> {
         true
     }
 
+    /// Convert [`FrameSyncer`] back into [`Connection`].
+    ///
+    /// Used when the game exits back into launcher
+    /// so that players can launch another app.
     pub fn into_connection(self) -> Connection<'a> {
         let mut peers = heapless::Vec::<Peer, 8>::new();
         for peer in self.peers {

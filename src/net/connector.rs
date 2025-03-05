@@ -176,10 +176,13 @@ impl<'a> Connector<'a> {
                 return Ok(());
             }
         }
-        // TODO: validate the name
+        let mut name = intro.name;
+        if firefly_types::validate_name(&name).is_err() {
+            name = "anonymous".try_into().unwrap();
+        }
         let info = PeerInfo {
             addr,
-            name: intro.name,
+            name,
             // version: intro.version,
         };
         let res = self.peer_infos.push(info);
