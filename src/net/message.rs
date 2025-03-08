@@ -56,11 +56,14 @@ impl Message {
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Req {
     Hello,
+    /// Ask the device to re-send their intro.
     Intro,
     /// Ask the device if it is already started an app.
     Start,
-    /// Get the state for the given frame.
+    /// Request the state for the given frame.
     State(u32),
+    /// Tell other devices that this device is going to disconnect.
+    Disconnect,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -68,7 +71,6 @@ pub(crate) enum Resp {
     Intro(Intro),
     Start(Start),
     State(FrameState),
-    Disconnect,
 }
 
 #[derive(Serialize, Deserialize)]

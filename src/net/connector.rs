@@ -158,16 +158,16 @@ impl<'a> Connector<'a> {
         addr: Addr,
         req: Req,
     ) -> Result<(), NetcodeError> {
-        if matches!(req, Req::Intro) {
-            self.send_intro(device, addr)?
+        match req {
+            Req::Intro => self.send_intro(device, addr),
+            Req::Disconnect => self.handle_disconnect(addr),
+            _ => Ok(()),
         }
-        Ok(())
     }
 
     fn handle_resp(&mut self, addr: Addr, resp: Resp) -> Result<(), NetcodeError> {
         match resp {
             Resp::Intro(intro) => self.handle_intro(addr, intro),
-            Resp::Disconnect => self.handle_disconnect(addr),
             _ => Ok(()),
         }
     }
@@ -233,7 +233,7 @@ impl<'a> Connector<'a> {
     }
 
     fn send_disconnect(&mut self) -> Result<(), NetcodeError> {
-        let msg = Message::Resp(Resp::Disconnect);
+        let msg = Message::Req(Req::Disconnect);
         let mut buf = alloc::vec![0u8; MSG_SIZE];
         let raw = msg.encode(&mut buf)?;
         for addr in &self.peer_addrs {
