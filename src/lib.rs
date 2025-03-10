@@ -9,6 +9,7 @@ mod canvas;
 mod color;
 mod config;
 mod error;
+mod error_scene;
 mod frame_buffer;
 mod host;
 mod linking;
