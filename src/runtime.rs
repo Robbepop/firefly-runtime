@@ -202,6 +202,13 @@ where
             }
             return Ok(false);
         }
+        if let Some(scene) = &mut state.error {
+            let res = scene.render(&mut self.display);
+            if res.is_err() {
+                return Err(Error::CannotDisplay);
+            }
+            return Ok(false);
+        }
 
         // TODO: pause audio when opening menu
         let menu_is_active = state.menu.active();

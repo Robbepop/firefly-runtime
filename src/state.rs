@@ -1,6 +1,7 @@
 use crate::canvas::Canvas;
 use crate::config::FullID;
 use crate::error::RuntimeStats;
+use crate::error_scene::ErrorScene;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
 use crate::png::save_png;
@@ -27,6 +28,8 @@ pub(crate) struct State<'a> {
 
     /// The app menu manager.
     pub menu: Menu,
+
+    pub error: Option<ErrorScene>,
 
     /// Audio manager.
     pub audio: firefly_audio::Manager,
@@ -97,6 +100,7 @@ impl<'a> State<'a> {
             frame: FrameBuffer::new(),
             canvas: None,
             menu: Menu::new(offline, launcher),
+            error: None,
             audio: firefly_audio::Manager::new(),
             seed,
             lock_seed: false,
@@ -291,7 +295,16 @@ impl<'a> State<'a> {
 
     /// Update the state: read inputs, handle system commands.
     pub(crate) fn update(&mut self) -> Option<u8> {
-        self.input = self.device.read_input();
+        if let Some(scene) = self.error.as_mut() {
+            let close = scene.update(&mut self.device);
+            if close {
+                self.error = None;
+            }
+        }
+
+        if self.error.is_none() {
+            self.input = self.device.read_input();
+        }
         self.update_net();
 
         // Get combined input for all peers.

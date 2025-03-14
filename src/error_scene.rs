@@ -10,7 +10,7 @@ use firefly_hal::{Device, DeviceImpl, Duration, Instant};
 
 const FONT_HEIGHT: i32 = 10;
 const FONT_WIDTH: i32 = 6;
-const BTN_DELAY: Duration = Duration::from_ms(4_000);
+const BTN_DELAY: Duration = Duration::from_ms(500);
 
 /// An alert popup window showing an error message.
 pub(crate) struct ErrorScene {
@@ -47,6 +47,7 @@ impl ErrorScene {
             };
             if now - start > BTN_DELAY {
                 self.enabled_btn = true;
+                self.showed_btn = false;
             }
         }
 
@@ -57,13 +58,10 @@ impl ErrorScene {
                 None => 0u8,
             };
             let buttons = buttons & 0b11111;
-            if buttons == 0 {
-                if buttons != 0 {
-                    self.buttons = buttons;
-                } else {
-                    return true;
-                }
+            if self.buttons != 0 && buttons == 0 {
+                return true;
             }
+            self.buttons = buttons
         }
         false
     }
@@ -74,10 +72,12 @@ impl ErrorScene {
         C: RgbColor + FromRGB,
     {
         if !self.showed_msg {
+            display.clear(C::BG)?;
             let mut text_style = MonoTextStyle::new(&FONT_6X9, C::PRIMARY);
             text_style.background_color = Some(C::BG);
-            let point = Point::new(120 - 3 * 13, 71 - FONT_HEIGHT);
             let text = alloc::format!("{}", self.msg);
+            let x_shift = (FONT_WIDTH / 2) * text.len() as i32;
+            let point = Point::new(120 - x_shift, 71 - FONT_HEIGHT);
             let text = Text::new(&text, point, text_style);
             text.draw(display)?;
             self.showed_msg = true;
@@ -90,7 +90,7 @@ impl ErrorScene {
             };
             let mut text_style = MonoTextStyle::new(&FONT_6X9, color);
             text_style.background_color = Some(C::BG);
-            let point = Point::new(120 - 3 * 13, 120 - FONT_HEIGHT);
+            let point = Point::new(120 - (FONT_WIDTH / 2) * 6, 120 - FONT_HEIGHT);
             let text = "oh no!";
             let text = Text::new(text, point, text_style);
             text.draw(display)?;
