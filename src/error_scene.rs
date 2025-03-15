@@ -1,6 +1,4 @@
 use crate::color::FromRGB;
-use alloc::boxed::Box;
-use core::fmt::Display;
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X9, MonoTextStyle},
     prelude::*,
@@ -16,7 +14,7 @@ const BTN_DELAY: Duration = Duration::from_ms(500);
 
 /// An alert popup window showing an error message.
 pub(crate) struct ErrorScene {
-    msg: Box<dyn Display>,
+    msg: alloc::string::String,
     start: Option<Instant>,
     showed_msg: bool,
     showed_btn: bool,
@@ -25,7 +23,7 @@ pub(crate) struct ErrorScene {
 }
 
 impl ErrorScene {
-    pub fn new(msg: Box<dyn Display>) -> Self {
+    pub fn new(msg: alloc::string::String) -> Self {
         Self {
             msg,
             start: None,
@@ -77,16 +75,16 @@ impl ErrorScene {
             display.clear(C::BG)?;
             let mut text_style = MonoTextStyle::new(&FONT_6X9, C::PRIMARY);
             text_style.background_color = Some(C::BG);
-            let mut text = alloc::format!("{}", self.msg);
-            wrap_text(&mut text);
-            let line_width = text
+            wrap_text(&mut self.msg);
+            let line_width = self
+                .msg
                 .lines()
                 .map(|line| line.len())
                 .max()
                 .unwrap_or_default();
             let x_shift = FONT_WIDTH * line_width as i32 / 2;
             let point = Point::new(CENTER.x - x_shift, 71 - FONT_HEIGHT);
-            let text = Text::new(&text, point, text_style);
+            let text = Text::new(&self.msg, point, text_style);
             text.draw(display)?;
             self.showed_msg = true;
         }

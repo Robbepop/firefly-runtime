@@ -29,7 +29,9 @@ pub(crate) struct Connector<'a> {
     last_advertisement: Option<Instant>,
     peer_addrs: heapless::Vec<Addr, MAX_PEERS>,
     peer_infos: heapless::Vec<PeerInfo, MAX_PEERS>,
+    /// If the network interface (WiFi) has been activated.
     started: bool,
+    /// If the device should not accept eny new connections.
     stopped: bool,
 }
 
@@ -52,13 +54,6 @@ impl<'a> Connector<'a> {
 
     pub fn peer_infos(&self) -> &heapless::Vec<PeerInfo, MAX_PEERS> {
         &self.peer_infos
-    }
-
-    pub fn update(&mut self, device: &DeviceImpl) {
-        let res = self.update_inner(device);
-        if let Err(err) = res {
-            device.log_error("netcode", err);
-        }
     }
 
     /// Stop announcing and accepting new connections.
@@ -104,16 +99,15 @@ impl<'a> Connector<'a> {
         }
     }
 
-    fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
-        if self.stopped {
-            return Ok(());
-        }
+    pub fn update(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
         if !self.started {
             self.started = true;
             self.net.start()?;
         }
-        let now = device.now();
-        self.advertise(now)?;
+        if !self.stopped {
+            let now = device.now();
+            self.advertise(now)?;
+        }
         if let Some((addr, msg)) = self.net.recv()? {
             self.handle_message(device, addr, msg)?;
         }
@@ -137,7 +131,7 @@ impl<'a> Connector<'a> {
         addr: Addr,
         raw: Box<[u8]>,
     ) -> Result<(), NetcodeError> {
-        if !self.peer_addrs.contains(&addr) {
+        if !self.stopped && !self.peer_addrs.contains(&addr) {
             device.log_debug("netcode", "new device discovered");
             let res = self.peer_addrs.push(addr);
             if res.is_err() {
@@ -173,6 +167,9 @@ impl<'a> Connector<'a> {
     }
 
     fn handle_intro(&mut self, addr: Addr, intro: Intro) -> Result<(), NetcodeError> {
+        if self.stopped {
+            return Ok(());
+        }
         for info in &self.peer_infos {
             if info.addr == addr {
                 return Ok(());
@@ -195,12 +192,15 @@ impl<'a> Connector<'a> {
     }
 
     fn handle_disconnect(&mut self, addr: Addr) -> Result<(), NetcodeError> {
+        let mut name = heapless::String::try_from("???").unwrap();
+
         let maybe_index = self
             .peer_infos
             .iter()
             .enumerate()
             .find(|(_, info)| info.addr == addr);
-        if let Some((index, _)) = maybe_index {
+        if let Some((index, info)) = maybe_index {
+            name = info.name.clone();
             self.peer_infos.remove(index);
         }
 
@@ -213,6 +213,9 @@ impl<'a> Connector<'a> {
             self.peer_addrs.remove(index);
         }
 
+        if self.stopped {
+            return Err(NetcodeError::Disconnected(name));
+        }
         Ok(())
     }
 

@@ -377,7 +377,12 @@ impl<'a> State<'a> {
     }
 
     fn update_connector<'b>(&mut self, mut connector: Connector<'b>) -> NetHandler<'b> {
-        connector.update(&self.device);
+        let res = connector.update(&self.device);
+        if let Err(err) = res {
+            self.error = Some(ErrorScene::new(alloc::format!("{}", err)));
+            self.device.log_error("netcode", err);
+        }
+
         let Some(scene) = self.connect_scene.as_mut() else {
             return NetHandler::Connector(connector);
         };
