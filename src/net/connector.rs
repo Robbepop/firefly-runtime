@@ -144,7 +144,6 @@ impl<'a> Connector<'a> {
         raw: Box<[u8]>,
     ) -> Result<(), NetcodeError> {
         if !self.stopped && !self.peer_addrs.contains(&addr) {
-            device.log_debug("netcode", "new device discovered");
             let res = self.peer_addrs.push(addr);
             if res.is_err() {
                 return Err(NetcodeError::PeerListFull);
