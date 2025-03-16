@@ -15,7 +15,7 @@ const FONT_WIDTH: i32 = 6;
 const X: i32 = 120 - 3 * 13;
 const Y: i32 = 71;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
 pub(crate) enum ConnectStatus {
     /// Stopped listening, [Connector] should do nothing.
     Stopped,

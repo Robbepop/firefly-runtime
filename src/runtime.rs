@@ -200,15 +200,6 @@ where
             }
             return Ok(false);
         }
-        if let Some(scene) = &mut state.connect_scene {
-            if let NetHandler::Connector(connector) = &state.net_handler.get_mut() {
-                let res = scene.render(connector, &mut self.display);
-                if res.is_err() {
-                    return Err(Error::CannotDisplay);
-                }
-            }
-            return Ok(false);
-        }
 
         // TODO: pause audio when opening menu
         let menu_is_active = state.menu.active();

@@ -33,6 +33,7 @@ pub(crate) struct Connector<'a> {
     started: bool,
     /// If the device should not accept eny new connections.
     stopped: bool,
+    pub status: Option<ConnectStatus>,
 }
 
 impl<'a> Connector<'a> {
@@ -45,6 +46,7 @@ impl<'a> Connector<'a> {
             peer_infos: heapless::Vec::new(),
             started: false,
             stopped: false,
+            status: None,
         }
     }
 

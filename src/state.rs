@@ -78,7 +78,6 @@ pub(crate) struct State<'a> {
     pub stash_dirty: bool,
 
     pub net_handler: Cell<NetHandler<'a>>,
-    pub connect_scene: Option<ConnectScene>,
     action: Action,
 }
 
@@ -110,7 +109,6 @@ impl<'a> State<'a> {
             input: None,
             called: "",
             net_handler: Cell::new(net_handler),
-            connect_scene: None,
             settings: None,
             app_stats: None,
             app_stats_dirty: false,
@@ -164,11 +162,10 @@ impl<'a> State<'a> {
     /// Set ID of the next app to run and close the currently running one.
     pub(crate) fn set_next(&mut self, app: Option<FullID>) {
         match self.net_handler.get_mut() {
-            NetHandler::None => {
+            NetHandler::None | NetHandler::Connector(_) => {
                 self.next = app;
                 self.exit = true;
             }
-            NetHandler::Connector(_) => unreachable!("cannot launch app while connecting"),
             NetHandler::FrameSyncer(_) => {
                 let action = match app {
                     Some(id) if id == self.id => Action::Restart,
@@ -377,22 +374,13 @@ impl<'a> State<'a> {
     }
 
     fn update_connector<'b>(&mut self, mut connector: Connector<'b>) -> NetHandler<'b> {
-        let Some(scene) = self.connect_scene.as_mut() else {
-            return NetHandler::Connector(connector);
-        };
         let res = connector.update(&self.device);
         if let Err(err) = res {
             self.error = Some(ErrorScene::new(alloc::format!("{}", err)));
             self.device.log_error("netcode", err);
-            // The next scene rendering will be called
-            // only when the error popup is closed.
-            // And when it does, we want the connector scene
-            // to redraw the whole frame.
-            scene.redraw();
             return NetHandler::Connector(connector);
         }
-        let conn_status = scene.update(&self.input);
-        let Some(mut conn_status) = conn_status else {
+        let Some(mut conn_status) = connector.status else {
             return NetHandler::Connector(connector);
         };
         // If the peers list contains only the current device itself,
@@ -409,7 +397,7 @@ impl<'a> State<'a> {
                 NetHandler::Connector(connector)
             }
             ConnectStatus::Cancelled => {
-                self.connect_scene = None;
+                self.set_next(None);
                 let res = connector.cancel();
                 if let Err(err) = res {
                     self.device.log_error("netcode", err);
@@ -417,7 +405,7 @@ impl<'a> State<'a> {
                 NetHandler::None
             }
             ConnectStatus::Finished => {
-                self.connect_scene = None;
+                self.set_next(None);
                 // Re-render menu with "disconnect" button instead of "connect".
                 self.menu = Menu::new(false, true);
                 let connection = connector.finalize();
@@ -527,9 +515,6 @@ impl<'a> State<'a> {
     }
 
     fn connect(&mut self) {
-        if self.connect_scene.is_none() {
-            self.connect_scene = Some(ConnectScene::new());
-        }
         if !matches!(self.net_handler.get_mut(), NetHandler::None) {
             return;
         }
@@ -540,10 +525,11 @@ impl<'a> State<'a> {
         let net = self.device.network();
         self.net_handler
             .set(NetHandler::Connector(Connector::new(me, net)));
+        let id = FullID::new("sys".try_into().unwrap(), "connector".try_into().unwrap());
+        self.set_next(Some(id));
     }
 
     fn disconnect(&mut self) {
-        self.connect_scene = None;
         let net_handler = self.net_handler.replace(NetHandler::None);
         if let NetHandler::Connection(conn) = net_handler {
             let res = conn.disconnect();
