@@ -98,20 +98,34 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
         return 0;
     };
     let (data, state) = memory.data_and_store_mut(&mut caller);
-    let name: &str = if is_online(state) {
-        let handler = state.net_handler.get_mut();
-        let NetHandler::FrameSyncer(syncer) = handler else {
-            // It could've been type safe with pattern matching but then
-            // the borrow checker is unhappy.
-            unreachable!("must be called only if is_online check returns true");
-        };
-        let Some(peer) = syncer.peers.get(index as usize) else {
-            return 0;
-        };
-        &peer.name
-    } else {
-        &state.get_settings().name
+
+    let handler = state.net_handler.get_mut();
+    let name: &str = match handler {
+        NetHandler::FrameSyncer(syncer) => {
+            let Some(peer) = syncer.peers.get(index as usize) else {
+                return 0;
+            };
+            &peer.name
+        }
+        NetHandler::None => &state.get_settings().name,
+        NetHandler::Connector(connector) => match connector.peer_infos().get(index as usize) {
+            Some(peer) => &peer.name,
+            None => {
+                let peers = connector.peer_infos().len() + connector.peer_addrs().len();
+                if index as usize > peers {
+                    return 0;
+                }
+                "???"
+            }
+        },
+        NetHandler::Connection(connection) => {
+            let Some(peer) = connection.peers.get(index as usize) else {
+                return 0;
+            };
+            &peer.name
+        }
     };
+
     if name.is_empty() {
         return 0;
     }
@@ -123,12 +137,6 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
     };
     buf.copy_from_slice(name.as_bytes());
     name.len() as u32
-}
-
-/// Check if there is a frame syncer available.
-fn is_online(state: &mut State) -> bool {
-    let handler = state.net_handler.get_mut();
-    matches!(handler, NetHandler::FrameSyncer(_))
 }
 
 /// Stop the currently running app and run the default launcher instead.
