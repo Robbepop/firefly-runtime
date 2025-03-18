@@ -329,14 +329,34 @@ pub(crate) fn draw_qr(
             height: width,
         },
     };
-    let black = Gray4::new(black as u8 - 1);
-    let white = Gray4::new(white as u8 - 1);
-    let colors = ascii_img.chars().filter_map(|ch| match ch {
-        '#' => Some(black),
-        ' ' => Some(white),
-        _ => None,
-    });
-    never_fails(state.frame.fill_contiguous(&area, colors));
+    let black = if black != 0 {
+        Some(Gray4::new(black as u8 - 1))
+    } else {
+        None
+    };
+    let white = if white != 0 {
+        Some(Gray4::new(white as u8 - 1))
+    } else {
+        None
+    };
+    if let (Some(black), Some(white)) = (black, white) {
+        let colors = ascii_img.chars().filter_map(|ch| match ch {
+            '#' => Some(black),
+            ' ' => Some(white),
+            _ => None,
+        });
+        never_fails(state.frame.fill_contiguous(&area, colors));
+    } else {
+        let pixels = ascii_img
+            .chars()
+            .filter(|ch| *ch != '\n')
+            .zip(area.points())
+            .filter_map(|(ch, point)| {
+                let color = if ch == '#' { black } else { white };
+                color.map(|color| Pixel(point, color))
+            });
+        never_fails(state.frame.draw_iter(pixels));
+    }
 }
 
 /// Draw a text message using the given font.
