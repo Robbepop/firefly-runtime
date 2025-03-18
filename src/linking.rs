@@ -100,6 +100,46 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>, sudo: bool) -> Result<(), 
     linker.func_wrap(M, "fd_write", wasip1::fd_write)?;
     linker.func_wrap(M, "proc_exit", wasip1::proc_exit)?;
 
+    link_aliases(linker)
+}
+
+// Link short aliases for when the wasm binary size is paramount (code golfing).
+fn link_aliases(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error> {
+    linker.func_wrap("g", "a", graphics::draw_arc)?;
+    linker.func_wrap("g", "c", graphics::draw_circle)?;
+    linker.func_wrap("g", "ca", graphics::set_canvas)?;
+    linker.func_wrap("g", "cr", graphics::unset_canvas)?;
+    linker.func_wrap("g", "cs", graphics::clear_screen)?;
+    linker.func_wrap("g", "e", graphics::draw_ellipse)?;
+    linker.func_wrap("g", "i", graphics::draw_image)?;
+    linker.func_wrap("g", "l", graphics::draw_line)?;
+    linker.func_wrap("g", "p", graphics::draw_point)?;
+    linker.func_wrap("g", "r", graphics::draw_rect)?;
+    linker.func_wrap("g", "rr", graphics::draw_rounded_rect)?;
+    linker.func_wrap("g", "s", graphics::draw_sector)?;
+    linker.func_wrap("g", "sc", graphics::set_color)?;
+    linker.func_wrap("g", "si", graphics::draw_sub_image)?;
+    linker.func_wrap("g", "t", graphics::draw_triangle)?;
+    linker.func_wrap("g", "x", graphics::draw_text)?;
+
+    linker.func_wrap("i", "p", input::read_pad)?;
+    linker.func_wrap("i", "b", input::read_buttons)?;
+
+    linker.func_wrap("n", "l", net::load_stash)?;
+    linker.func_wrap("n", "m", net::get_me)?;
+    linker.func_wrap("n", "p", net::get_peers)?;
+    linker.func_wrap("n", "s", net::save_stash)?;
+
+    linker.func_wrap("s", "p", stats::add_progress)?;
+    linker.func_wrap("s", "s", stats::add_score)?;
+
+    linker.func_wrap("m", "d", misc::log_debug)?;
+    linker.func_wrap("m", "e", misc::log_error)?;
+    linker.func_wrap("m", "n", misc::get_name)?;
+    linker.func_wrap("m", "q", misc::quit)?;
+    linker.func_wrap("m", "r", misc::get_random)?;
+    linker.func_wrap("m", "s", misc::set_seed)?;
+
     Ok(())
 }
 
