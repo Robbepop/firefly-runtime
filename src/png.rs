@@ -1,9 +1,12 @@
-use crate::frame_buffer::{HEIGHT, WIDTH};
+use crate::{
+    color::Rgb16,
+    frame_buffer::{HEIGHT, WIDTH},
+};
 use core2::io::Write;
 use embedded_graphics::pixelcolor::{Rgb888, RgbColor};
 
 /// Write the frame buffer as a PNG file.
-pub(crate) fn save_png<W, E>(mut w: W, palette: &[Rgb888; 16], frame: &[u8]) -> Result<(), E>
+pub(crate) fn save_png<W, E>(mut w: W, palette: &[Rgb16; 16], frame: &[u8]) -> Result<(), E>
 where
     W: embedded_io::Write<Error = E>,
 {
@@ -42,9 +45,10 @@ fn swap_pairs(frame: &[u8]) -> alloc::vec::Vec<u8> {
 }
 
 /// Serialize the palette as continius RGB bytes.
-fn encode_palette(palette: &[Rgb888; 16]) -> [u8; 16 * 3] {
+fn encode_palette(palette: &[Rgb16; 16]) -> [u8; 16 * 3] {
     let mut encoded: [u8; 16 * 3] = [0; 16 * 3];
     for (i, color) in palette.iter().enumerate() {
+        let color: Rgb888 = (*color).into();
         let i = i * 3;
         encoded[i] = color.r();
         encoded[i + 1] = color.g();

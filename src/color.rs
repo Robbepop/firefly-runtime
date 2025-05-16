@@ -1,8 +1,52 @@
 use core::marker::PhantomData;
 use embedded_graphics::geometry::OriginDimensions;
+use embedded_graphics::pixelcolor::raw::RawU16;
 use embedded_graphics::pixelcolor::*;
-use embedded_graphics::prelude::DrawTarget;
+use embedded_graphics::prelude::*;
 use embedded_graphics::Pixel;
+
+/// Color optimized for fast rendering on the device.
+#[derive(PartialEq, Clone, Copy)]
+pub struct Rgb16(pub u8, pub u8);
+
+impl Rgb16 {
+    pub const fn from_rgb(r: u16, g: u16, b: u16) -> Self {
+        let r = r >> 3;
+        let g = g >> 2;
+        let b = b >> 3;
+        let raw = (b << 11) | (g << 5) | r;
+        let raw = raw.to_le_bytes();
+        Self(!raw[0], !raw[1])
+    }
+
+    pub const fn into_rgb(self) -> (u8, u8, u8) {
+        let raw = u16::from_le_bytes([!self.0, !self.1]);
+        let r = (raw << 3) as u8;
+        let g = ((raw >> 5) << 2) as u8;
+        let b = ((raw >> 11) << 3) as u8;
+        (r, g, b)
+    }
+}
+
+impl PixelColor for Rgb16 {
+    type Raw = RawU16;
+}
+
+impl From<Rgb888> for Rgb16 {
+    fn from(c: Rgb888) -> Self {
+        let r = u16::from(c.r());
+        let g = u16::from(c.g());
+        let b = u16::from(c.b());
+        Self::from_rgb(r, g, b)
+    }
+}
+
+impl From<Rgb16> for Rgb888 {
+    fn from(c: Rgb16) -> Self {
+        let (r, g, b) = c.into_rgb();
+        Self::new(r, g, b)
+    }
+}
 
 // Convert 1/2/4 BPP image into 4 BPP ([`Gray4`]) color.
 pub(crate) struct BPPAdapter<'a, D, C>
@@ -74,7 +118,18 @@ pub trait FromRGB {
     /// The gray muted text color.
     const MUTED: Self;
 
-    fn from_rgb(r: u8, g: u8, b: u8) -> Self;
+    fn from_rgb(rgb: Rgb16) -> Self;
+}
+
+impl FromRGB for Rgb16 {
+    const BG: Self = Self::from_rgb(0xf4, 0xf4, 0xf4);
+    const PRIMARY: Self = Self::from_rgb(0x1a, 0x1c, 0x2c);
+    const ACCENT: Self = Self::from_rgb(0x3b, 0x5d, 0xc9);
+    const MUTED: Self = Self::from_rgb(0x94, 0xb0, 0xc2);
+
+    fn from_rgb(rgb: Self) -> Self {
+        rgb
+    }
 }
 
 impl FromRGB for Rgb565 {
@@ -83,8 +138,9 @@ impl FromRGB for Rgb565 {
     const ACCENT: Self = new_rgb565(0x3b, 0x5d, 0xc9);
     const MUTED: Self = new_rgb565(0x94, 0xb0, 0xc2);
 
-    fn from_rgb(r: u8, g: u8, b: u8) -> Self {
-        new_rgb565(r, g, b)
+    fn from_rgb(rgb: Rgb16) -> Self {
+        let (r, g, b) = rgb.into_rgb();
+        Self::new(r, g, b)
     }
 }
 
@@ -94,8 +150,8 @@ impl FromRGB for Rgb888 {
     const ACCENT: Self = Self::new(0x3b, 0x5d, 0xc9);
     const MUTED: Self = Self::new(0x94, 0xb0, 0xc2);
 
-    fn from_rgb(r: u8, g: u8, b: u8) -> Self {
-        Self::new(r, g, b)
+    fn from_rgb(rgb: Rgb16) -> Self {
+        rgb.into()
     }
 }
 

@@ -1,8 +1,8 @@
-use crate::color::FromRGB;
+use crate::color::{FromRGB, Rgb16};
 use alloc::boxed::Box;
 use core::convert::Infallible;
 use core::marker::PhantomData;
-use embedded_graphics::pixelcolor::{Gray4, Rgb888};
+use embedded_graphics::pixelcolor::Gray4;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
 
@@ -15,11 +15,15 @@ const PPB: usize = 8 / BPP;
 /// Bytes needed to store all pixels.
 const BUFFER_SIZE: usize = WIDTH * HEIGHT / PPB;
 
+const fn rgb(r: u16, g: u16, b: u16) -> Rgb16 {
+    Rgb16::from_rgb(r, g, b)
+}
+
 pub(crate) struct FrameBuffer {
     /// Tightly packed pixel data, 4 bits per pixel (2 pixels per byte).
     pub(crate) data: Box<[u8; BUFFER_SIZE]>,
     /// The color palette. Maps 16-color packed pixels to RGB colors.
-    pub(crate) palette: [Rgb888; 16],
+    pub(crate) palette: [Rgb16; 16],
     dirty: bool,
 }
 
@@ -30,22 +34,22 @@ impl FrameBuffer {
             palette: [
                 // https://lospec.com/palette-list/sweetie-16
                 // https://github.com/nesbox/TIC-80/wiki/Palette
-                Rgb888::new(0x1a, 0x1c, 0x2c), // black
-                Rgb888::new(0x5d, 0x27, 0x5d), // purple
-                Rgb888::new(0xb1, 0x3e, 0x53), // red
-                Rgb888::new(0xef, 0x7d, 0x57), // orange
-                Rgb888::new(0xff, 0xcd, 0x75), // yellow
-                Rgb888::new(0xa7, 0xf0, 0x70), // light green
-                Rgb888::new(0x38, 0xb7, 0x64), // green
-                Rgb888::new(0x25, 0x71, 0x79), // dark green
-                Rgb888::new(0x29, 0x36, 0x6f), // dark blue
-                Rgb888::new(0x3b, 0x5d, 0xc9), // blue
-                Rgb888::new(0x41, 0xa6, 0xf6), // light blue
-                Rgb888::new(0x73, 0xef, 0xf7), // cyan
-                Rgb888::new(0xf4, 0xf4, 0xf4), // white
-                Rgb888::new(0x94, 0xb0, 0xc2), // light gray
-                Rgb888::new(0x56, 0x6c, 0x86), // gray
-                Rgb888::new(0x33, 0x3c, 0x57), // dark gray
+                rgb(0x1a, 0x1c, 0x2c), // black
+                rgb(0x5d, 0x27, 0x5d), // purple
+                rgb(0xb1, 0x3e, 0x53), // red
+                rgb(0xef, 0x7d, 0x57), // orange
+                rgb(0xff, 0xcd, 0x75), // yellow
+                rgb(0xa7, 0xf0, 0x70), // light green
+                rgb(0x38, 0xb7, 0x64), // green
+                rgb(0x25, 0x71, 0x79), // dark green
+                rgb(0x29, 0x36, 0x6f), // dark blue
+                rgb(0x3b, 0x5d, 0xc9), // blue
+                rgb(0x41, 0xa6, 0xf6), // light blue
+                rgb(0x73, 0xef, 0xf7), // cyan
+                rgb(0xf4, 0xf4, 0xf4), // white
+                rgb(0x94, 0xb0, 0xc2), // light gray
+                rgb(0x56, 0x6c, 0x86), // gray
+                rgb(0x33, 0x3c, 0x57), // dark gray
             ],
             dirty: false,
         }
@@ -211,7 +215,7 @@ where
     C: RgbColor + FromRGB,
 {
     data: &'a [u8; BUFFER_SIZE],
-    palette: &'a [Rgb888; 16],
+    palette: &'a [Rgb16; 16],
     index: usize,
     max_y: usize,
     color: PhantomData<C>,
@@ -234,17 +238,9 @@ where
         let luma = (byte >> (shift * BPP)) & 0b1111;
         debug_assert!(luma < 16);
         self.index += 1;
-        Some(convert_color(self.palette, luma))
+        let rgb16 = self.palette[luma as usize];
+        Some(C::from_rgb(rgb16))
     }
-}
-
-/// Convert 16-color gray luma into the target RGB color.
-fn convert_color<C>(palette: &[Rgb888; 16], luma: u8) -> C
-where
-    C: RgbColor + FromRGB,
-{
-    let rgb888 = palette[luma as usize];
-    C::from_rgb(rgb888.r(), rgb888.g(), rgb888.b())
 }
 
 /// Duplicate the color and pack into 1 byte.

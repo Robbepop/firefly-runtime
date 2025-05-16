@@ -1,3 +1,4 @@
+use crate::color::Rgb16;
 use crate::config::FullID;
 use crate::frame_buffer::FrameBuffer;
 use crate::host::graphics::*;
@@ -200,25 +201,25 @@ fn check_display(frame: &mut FrameBuffer, pattern: &[&str]) {
     let mut sub_display = display.clipped(&area);
     frame.palette = [
         // 0-4
-        Rgb888::new(255, 255, 255),
-        Rgb888::new(0, 255, 0),
-        Rgb888::new(255, 0, 0),
-        Rgb888::new(0, 0, 255),
+        Rgb16::from_rgb(255, 255, 255),
+        Rgb16::from_rgb(0, 255, 0),
+        Rgb16::from_rgb(255, 0, 0),
+        Rgb16::from_rgb(0, 0, 255),
         // 4-8
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
         // 8-12
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
         // 12-16
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
-        Rgb888::new(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
+        Rgb16::from_rgb(0, 0, 0),
     ];
     frame.draw(&mut sub_display).unwrap();
     display.assert_pattern(pattern);

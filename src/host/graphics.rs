@@ -1,11 +1,11 @@
 use crate::canvas::Canvas;
-use crate::color::BPPAdapter;
+use crate::color::{BPPAdapter, Rgb16};
 use crate::error::HostError;
 use crate::state::State;
 use core::convert::Infallible;
 use embedded_graphics::image::{Image, ImageRaw, ImageRawLE};
 use embedded_graphics::mono_font::{mapping, DecorationDimensions, MonoFont, MonoTextStyle};
-use embedded_graphics::pixelcolor::{BinaryColor, Gray2, Gray4, Rgb888};
+use embedded_graphics::pixelcolor::{BinaryColor, Gray2, Gray4};
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::*;
 use embedded_graphics::text::Text;
@@ -36,7 +36,15 @@ pub(crate) fn clear_screen(mut caller: C, color: i32) {
 pub(crate) fn set_color(mut caller: C, index: u32, r: u32, g: u32, b: u32) {
     let state = caller.data_mut();
     state.called = "graphics.set_color";
-    state.frame.palette[index as usize - 1] = Rgb888::new(r as u8, g as u8, b as u8);
+    if index > 16 {
+        state.log_error("color index out of range");
+        return;
+    }
+    if index == 0 {
+        state.log_error("cannot set color for transparency");
+        return;
+    }
+    state.frame.palette[index as usize - 1] = Rgb16::from_rgb(r as u16, g as u16, b as u16);
 }
 
 /// Draw a single point.
