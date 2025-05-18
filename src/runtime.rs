@@ -37,6 +37,8 @@ where
     per_frame: Duration,
     /// The last time when the frame was updated.
     prev_time: Instant,
+    /// The time that the previous frame took over the `per_frame` limit.
+    prev_lag: Duration,
     n_frames: u8,
     lagging_frames: u8,
     fast_frames: u8,
@@ -141,6 +143,7 @@ where
             fast_frames: 0,
             render_every: 2,
             prev_time: now,
+            prev_lag: Duration::from_ms(0),
             serial,
         };
         Ok(runtime)
@@ -277,16 +280,25 @@ where
         let elapsed = now - self.prev_time;
         if elapsed < self.per_frame {
             let delay = self.per_frame - elapsed;
-            if let Some(stats) = &mut self.stats {
-                stats.delays += delay;
+            if delay > self.prev_lag {
+                let delay = delay - self.prev_lag;
+                if let Some(stats) = &mut self.stats {
+                    stats.delays += delay;
+                    // we shaved off the previous lag, yay!
+                    if stats.lags >= self.prev_lag {
+                        stats.lags = stats.lags - self.prev_lag;
+                    }
+                }
+                state.device.delay(delay);
             }
-            state.device.delay(delay);
             self.fast_frames = (self.fast_frames + 1) % (FPS * 4);
+            self.prev_lag = Duration::from_ms(0);
             self.lagging_frames = 0;
         } else {
             if let Some(stats) = &mut self.stats {
                 stats.lags += elapsed - self.per_frame;
             }
+            self.prev_lag = elapsed - self.per_frame;
             self.lagging_frames = (self.lagging_frames + 1) % (FPS * 4);
             self.fast_frames = 0;
         }
