@@ -120,7 +120,10 @@ impl<'a> Connector<'a> {
             let now = device.now();
             self.advertise(now)?;
         }
-        if let Some((addr, msg)) = self.net.recv()? {
+        for _ in 0..4 {
+            let Some((addr, msg)) = self.net.recv()? else {
+                break;
+            };
             self.handle_message(device, addr, msg)?;
         }
         Ok(())

@@ -282,9 +282,7 @@ where
                 if let Some(stats) = &mut self.stats {
                     stats.delays += delay;
                     // we shaved off the previous lag, yay!
-                    if stats.lags >= self.prev_lag {
-                        stats.lags = stats.lags - self.prev_lag;
-                    }
+                    stats.lags -= self.prev_lag;
                 }
                 state.device.delay(delay);
             }

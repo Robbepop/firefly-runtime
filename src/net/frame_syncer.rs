@@ -141,18 +141,25 @@ impl<'a> FrameSyncer<'a> {
     /// It will also broadcast the new frame state to all connected peers.
     pub fn advance(&mut self, device: &mut DeviceImpl, mut state: FrameState) {
         self.frame += 1;
-
-        // Set the frame state for the local peer.
-        state.frame = self.frame;
         for peer in &mut self.peers {
             peer.states.advance();
+        }
+        state.frame = self.frame;
+        self.set_my_state(state);
+        self.broadcast_state(device, state);
+        self.last_advance = Some(device.now());
+    }
+
+    fn set_my_state(&mut self, state: FrameState) {
+        for peer in &mut self.peers {
             if peer.addr.is_none() {
-                peer.states.insert_current(state);
+                peer.states.insert(state.frame, state);
+                return;
             }
         }
-        self.last_advance = Some(device.now());
+    }
 
-        // Send the new frame state to all peers.
+    fn broadcast_state(&mut self, device: &mut DeviceImpl, state: FrameState) {
         let msg = Message::Resp(Resp::State(state));
         let mut buf = alloc::vec![0u8; MSG_SIZE];
         let raw = match msg.encode(&mut buf) {
@@ -179,7 +186,10 @@ impl<'a> FrameSyncer<'a> {
 
     fn update_inner(&mut self, device: &DeviceImpl) -> Result<(), NetcodeError> {
         self.sync(device)?;
-        while let Some((addr, msg)) = self.net.recv()? {
+        for _ in 0..4 {
+            let Some((addr, msg)) = self.net.recv()? else {
+                break;
+            };
             self.handle_message(addr, msg)?;
         }
         Ok(())
