@@ -169,11 +169,28 @@ impl<'a> FrameSyncer<'a> {
                 return;
             }
         };
+
+        // Check if all other peers already transmitted state
+        // and this peer is the last one.
+        let mut last = true;
+        for peer in &mut self.peers {
+            if peer.addr.is_some() && peer.states.get_current().is_none() {
+                last = false;
+                break;
+            }
+        }
+
+        // Check if this peer is the first on the list of peers.
+        // The first peer transmits without delay.
+        let first = self.peers.first().unwrap().addr.is_none();
+
         for peer in &mut self.peers {
             if let Some(addr) = peer.addr {
                 // Random jitter to avoid all devices transmitting at the same time.
-                let delay_us = device.random() % 4;
-                device.delay(Duration::from_us(delay_us));
+                if !first && !last {
+                    let delay_us = 1 + device.random() % 3;
+                    device.delay(Duration::from_us(delay_us));
+                }
                 let res = self.net.send(addr, raw);
                 if let Err(err) = res {
                     device.log_error("netcode", err);
@@ -203,6 +220,7 @@ impl<'a> FrameSyncer<'a> {
                 return Ok(());
             }
         }
+        device.log_debug("netcode", "requesting sync");
         self.last_sync = Some(now);
         let msg = Message::Req(Req::State(self.frame));
         let mut buf = alloc::vec![0u8; MSG_SIZE];
