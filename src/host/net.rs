@@ -43,6 +43,13 @@ pub(crate) fn get_peers(mut caller: C) -> u32 {
             }
             res
         }
+        NetHandler::Connection(connection) => {
+            let mut res = 0;
+            for _peer in &connection.peers {
+                res = res << 1 | 1;
+            }
+            res
+        }
         _ => 1,
     }
 }
