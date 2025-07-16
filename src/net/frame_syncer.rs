@@ -144,7 +144,16 @@ impl<'a> FrameSyncer<'a> {
         for peer in &mut self.peers {
             peer.states.advance();
         }
-        state.frame = self.frame;
+
+        // This code is responsible for setting the passed state
+        // for the next frame instead of the current one.
+        if self.frame == 1 {
+            state.frame = 1;
+            self.set_my_state(state);
+            self.broadcast_state(device, state);
+        }
+        state.frame = self.frame + 1;
+
         self.set_my_state(state);
         self.broadcast_state(device, state);
         self.last_advance = Some(device.now());
