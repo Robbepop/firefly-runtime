@@ -146,13 +146,6 @@ impl<'a> Connector<'a> {
         addr: Addr,
         raw: Box<[u8]>,
     ) -> Result<(), NetcodeError> {
-        if !self.stopped && !self.peer_addrs.contains(&addr) {
-            let res = self.peer_addrs.push(addr);
-            if res.is_err() {
-                return Err(NetcodeError::PeerListFull);
-            }
-            self.send_intro(device, addr)?;
-        }
         let msg = Message::decode(&raw)?;
         match msg {
             Message::Req(req) => self.handle_req(device, addr, req),
@@ -167,6 +160,7 @@ impl<'a> Connector<'a> {
         req: Req,
     ) -> Result<(), NetcodeError> {
         match req {
+            Req::Hello => self.handle_hello(device, addr),
             Req::Intro => self.send_intro(device, addr),
             Req::Disconnect => self.handle_disconnect(addr),
             _ => Ok(()),
@@ -178,6 +172,17 @@ impl<'a> Connector<'a> {
             Resp::Intro(intro) => self.handle_intro(addr, intro),
             _ => Ok(()),
         }
+    }
+
+    fn handle_hello(&mut self, device: &DeviceImpl, addr: Addr) -> Result<(), NetcodeError> {
+        if !self.stopped && !self.peer_addrs.contains(&addr) {
+            let res = self.peer_addrs.push(addr);
+            if res.is_err() {
+                return Err(NetcodeError::PeerListFull);
+            }
+        }
+        self.send_intro(device, addr)?;
+        Ok(())
     }
 
     fn handle_intro(&mut self, addr: Addr, intro: Intro) -> Result<(), NetcodeError> {
