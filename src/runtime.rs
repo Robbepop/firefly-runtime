@@ -15,7 +15,7 @@ use firefly_types::*;
 /// Default frames per second.
 const FPS: u8 = 60;
 const KB: u32 = 1024;
-const FUEL_PER_CALL: u64 = 1_000_000;
+const FUEL_PER_CALL: u64 = 10_000_000;
 
 pub struct Runtime<'a, D, C>
 where
