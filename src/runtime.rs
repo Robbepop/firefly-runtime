@@ -118,11 +118,17 @@ where
         let mut store = wasmi::Store::<State<'a>>::new(&engine, state);
         _ = store.set_fuel(FUEL_PER_CALL);
         let instance = {
-            let module = wasmi::Module::new_streaming(&engine, stream)?;
+            let wasm_bin = match read_all(stream) {
+                Ok(wasm_bin) => wasm_bin,
+                Err(err) => {
+                    let err = FSError::from(err);
+                    return Err(Error::OpenFile(bin_path.join("/"), err));
+                }
+            };
+            let module = wasmi::Module::new(&engine, wasm_bin)?;
             let mut linker = wasmi::Linker::<State>::new(&engine);
             link(&mut linker, sudo)?;
-            let instance_pre = linker.instantiate(&mut store, &module)?;
-            instance_pre.start(&mut store)?
+            linker.instantiate_and_start(&mut store, &module)?
         };
 
         let runtime = Self {

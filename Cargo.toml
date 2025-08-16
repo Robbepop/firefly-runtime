@@ -21,4 +21,4 @@ postcard = "1.0.8"
 # https://github.com/kennytm/qrcode-rust/pull/73
 qrcode = { git = "https://github.com/kennytm/qrcode-rust.git", default-features = false }
 serde = { version = "1.0.203", default-features = false, features = ["derive"] }
-wasmi = { version = "0.46.0", default-features = false }
+wasmi = { version = "0.51.0", default-features = false }
