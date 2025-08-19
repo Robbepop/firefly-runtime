@@ -1,16 +1,17 @@
 use crate::canvas::Canvas;
+use crate::color::Rgb16;
 use crate::config::FullID;
 use crate::error::RuntimeStats;
 use crate::error_scene::ErrorScene;
 use crate::frame_buffer::FrameBuffer;
 use crate::menu::{Menu, MenuItem};
-use crate::png::save_png;
 use crate::utils::{read_all, read_all_into};
 use crate::{net::*, Error};
 use alloc::boxed::Box;
 use core::cell::Cell;
 use core::fmt::Display;
 use core::str::FromStr;
+use embedded_graphics::pixelcolor::{Rgb888, RgbColor};
 use embedded_io::Write;
 use firefly_hal::*;
 use firefly_types::Encode;
@@ -497,7 +498,7 @@ impl<'a> State<'a> {
         let dir_path = &["data", self.id.author(), self.id.app(), "shots"];
         let mut index = 1;
         _ = self.device.iter_dir(dir_path, |_, _| index += 1);
-        let file_name = alloc::format!("{index}.png");
+        let file_name = alloc::format!("{index:03}.ffs");
         let path = &["data", self.id.author(), self.id.app(), "shots", &file_name];
         let mut file = match self.device.create_file(path) {
             Ok(file) => file,
@@ -507,7 +508,7 @@ impl<'a> State<'a> {
                 return;
             }
         };
-        let res = save_png(&mut file, &self.frame.palette, &*self.frame.data);
+        let res = write_shot(&mut file, &self.frame.palette, &*self.frame.data);
         if let Err(err) = res {
             let err: firefly_hal::FSError = err.into();
             self.log_error(err);
@@ -546,4 +547,31 @@ impl<'a> State<'a> {
     pub(crate) fn log_error<D: Display>(&self, msg: D) {
         self.device.log_error(self.called, msg);
     }
+}
+
+/// Write the frame buffer as a screenshot file.
+pub(crate) fn write_shot<W, E>(mut w: W, palette: &[Rgb16; 16], frame: &[u8]) -> Result<(), E>
+where
+    W: embedded_io::Write<Error = E>,
+{
+    w.write_all(&[0x41])?;
+    // TODO(@orsinium): what is faster: to write each byte directly into the file
+    // or, as it is now, create an array first and then write it in one go?
+    let palette = encode_palette(palette);
+    w.write_all(&palette)?;
+    w.write_all(frame)?;
+    Ok(())
+}
+
+/// Serialize the palette as continius RGB bytes.
+fn encode_palette(palette: &[Rgb16; 16]) -> [u8; 16 * 3] {
+    let mut encoded: [u8; 16 * 3] = [0; 16 * 3];
+    for (i, color) in palette.iter().enumerate() {
+        let color: Rgb888 = (*color).into();
+        let i = i * 3;
+        encoded[i] = color.r();
+        encoded[i + 1] = color.g();
+        encoded[i + 2] = color.b();
+    }
+    encoded
 }
