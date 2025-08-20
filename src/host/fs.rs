@@ -1,12 +1,12 @@
 use crate::state::State;
 use crate::utils::{read_into, write_all};
 use crate::{error::HostError, NetHandler};
+use alloc::boxed::Box;
 use embedded_io::Write;
 use firefly_hal::Device;
 use firefly_types::validate_path_part;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
-
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 /// DEPRECATED
 pub(crate) fn get_rom_file_size(caller: C, path_ptr: u32, path_len: u32) -> u32 {

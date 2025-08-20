@@ -1,9 +1,10 @@
 use crate::error::HostError;
 use crate::net::ConnectStatus;
 use crate::state::{NetHandler, State};
+use alloc::boxed::Box;
 use firefly_hal::Device;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 /// Write a debug log message into console.
 pub(crate) fn log_debug(mut caller: C, ptr: u32, len: u32) {

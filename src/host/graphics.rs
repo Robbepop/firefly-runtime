@@ -2,6 +2,7 @@ use crate::canvas::Canvas;
 use crate::color::{BPPAdapter, Rgb16};
 use crate::error::HostError;
 use crate::state::State;
+use alloc::boxed::Box;
 use core::convert::Infallible;
 use embedded_graphics::image::{Image, ImageRaw, ImageRawLE};
 use embedded_graphics::mono_font::{mapping, DecorationDimensions, MonoFont, MonoTextStyle};
@@ -10,7 +11,7 @@ use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::*;
 use embedded_graphics::text::Text;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 /// Set every pixel of the frame buffer to the given color.
 pub(crate) fn clear_screen(mut caller: C, color: i32) {

@@ -1,8 +1,9 @@
 use crate::error::HostError;
 use crate::state::State;
+use alloc::boxed::Box;
 use firefly_hal::Device;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 pub(crate) fn environ_get(_caller: C, _environ: i32, _environ_buf: i32) -> i32 {
     0

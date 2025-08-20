@@ -6,6 +6,7 @@ use crate::linking::link;
 use crate::state::{NetHandler, State};
 use crate::stats::StatsTracker;
 use crate::utils::read_all;
+use alloc::boxed::Box;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::OriginDimensions;
 use embedded_graphics::pixelcolor::RgbColor;
@@ -25,7 +26,7 @@ where
 {
     display: D,
     instance: wasmi::Instance,
-    store: wasmi::Store<State<'a>>,
+    store: wasmi::Store<Box<State<'a>>>,
 
     update: Option<wasmi::TypedFunc<(), ()>>,
     render: Option<wasmi::TypedFunc<(), ()>>,
@@ -137,11 +138,11 @@ where
             wasm_bin
         };
 
-        let mut store = wasmi::Store::<State<'a>>::new(&engine, state);
+        let mut store = wasmi::Store::<Box<State<'a>>>::new(&engine, state);
         _ = store.set_fuel(FUEL_PER_CALL);
         let instance = {
             let module = wasmi::Module::new(&engine, wasm_bin)?;
-            let mut linker = wasmi::Linker::<State>::new(&engine);
+            let mut linker = wasmi::Linker::<Box<State>>::new(&engine);
             link(&mut linker, sudo)?;
             linker.instantiate_and_start(&mut store, &module)?
         };

@@ -1,9 +1,9 @@
 use crate::error::HostError;
 use crate::state::{NetHandler, State};
+use alloc::boxed::Box;
 use firefly_hal::*;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
-
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 /// Get the finger position on the pad.
 ///

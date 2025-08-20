@@ -1,4 +1,5 @@
 use crate::state::State;
+use alloc::boxed::Box;
 use core::convert::Infallible;
 use embedded_graphics::pixelcolor::Gray4;
 use embedded_graphics::prelude::*;
@@ -24,7 +25,7 @@ impl Canvas {
     }
 
     /// Make a draw target that modifies the data inside the canvas.
-    pub fn as_target<'a>(&self, caller: &'a mut wasmi::Caller<'_, State>) -> CanvasBuffer<'a> {
+    pub fn as_target<'a>(&self, caller: &'a mut wasmi::Caller<'_, Box<State>>) -> CanvasBuffer<'a> {
         let state = caller.data();
         // safety: memory presence is ensured in set_canvas
         let memory = state.memory.unwrap();

@@ -1,11 +1,11 @@
+use super::stats::get_friend;
 use crate::{
     error::HostError,
     state::{NetHandler, State},
 };
+use alloc::boxed::Box;
 
-use super::stats::get_friend;
-
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 /// Get the index of the local peer.
 pub(crate) fn get_me(mut caller: C) -> u32 {

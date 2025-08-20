@@ -1,11 +1,12 @@
 use crate::error::HostError;
 use crate::state::State;
 use crate::{config::FullID, utils::read_into};
+use alloc::boxed::Box;
 use firefly_hal::Device;
 use firefly_types::{validate_id, validate_path_part};
 use heapless::Vec;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 /// How many parts at most a file path can have
 ///

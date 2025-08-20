@@ -1,9 +1,10 @@
 use crate::error::HostError;
 use crate::net::FSPeer;
 use crate::state::{NetHandler, State};
+use alloc::boxed::Box;
 use firefly_types::FriendScore;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 /// The peer_id representing the "combined"
 const COMBINED: u32 = 0xff;

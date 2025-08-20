@@ -5,7 +5,7 @@ use alloc::boxed::Box;
 use firefly_audio::*;
 use firefly_hal::Device;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 /// Add sine wave generator as a child for the given node.
 pub(crate) fn add_sine(mut caller: C, parent_id: u32, freq: f32, phase: f32) -> u32 {

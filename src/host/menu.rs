@@ -1,9 +1,9 @@
 use crate::error::HostError;
 use crate::state::State;
+use alloc::boxed::Box;
 use alloc::string::ToString;
 
-type C<'a, 'b> = wasmi::Caller<'a, State<'b>>;
-
+type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
 pub(crate) fn add_menu_item(mut caller: C, index: u32, name_ptr: u32, name_len: u32) {
     let state = caller.data_mut();

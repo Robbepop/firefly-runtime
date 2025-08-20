@@ -84,18 +84,22 @@ pub(crate) struct State<'a> {
 }
 
 impl<'a> State<'a> {
+    /// Allocate new state on heap.
+    ///
+    /// We automatically box the state because it's relatively fat
+    /// (arund 1 Kb) for the embedded heap.
     pub(crate) fn new(
         id: FullID,
         device: DeviceImpl<'a>,
         net_handler: NetHandler<'a>,
         launcher: bool,
-    ) -> Self {
+    ) -> Box<Self> {
         let offline = matches!(net_handler, NetHandler::None);
         let seed = match &net_handler {
             NetHandler::FrameSyncer(syncer) => syncer.shared_seed,
             _ => 0,
         };
-        Self {
+        Box::new(Self {
             device,
             id,
             frame: FrameBuffer::new(),
@@ -117,7 +121,7 @@ impl<'a> State<'a> {
             stash: alloc::vec::Vec::new(),
             stash_dirty: false,
             action: Action::None,
-        }
+        })
     }
 
     /// Read app stats from FS.

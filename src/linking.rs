@@ -1,8 +1,9 @@
 use crate::host::*;
 use crate::state::State;
+use alloc::boxed::Box;
 
 /// Register all host-defined functions in the linker.
-pub(crate) fn link(linker: &mut wasmi::Linker<State>, sudo: bool) -> Result<(), wasmi::Error> {
+pub(crate) fn link(linker: &mut wasmi::Linker<Box<State>>, sudo: bool) -> Result<(), wasmi::Error> {
     linker.func_wrap("graphics", "clear_screen", graphics::clear_screen)?;
     linker.func_wrap("graphics", "set_color", graphics::set_color)?;
     linker.func_wrap("graphics", "draw_point", graphics::draw_point)?;
@@ -105,7 +106,7 @@ pub(crate) fn link(linker: &mut wasmi::Linker<State>, sudo: bool) -> Result<(), 
 }
 
 // Link short aliases for when the wasm binary size is paramount (code golfing).
-fn link_aliases(linker: &mut wasmi::Linker<State>) -> Result<(), wasmi::Error> {
+fn link_aliases(linker: &mut wasmi::Linker<Box<State>>) -> Result<(), wasmi::Error> {
     linker.func_wrap("g", "a", graphics::draw_arc)?;
     linker.func_wrap("g", "c", graphics::draw_circle)?;
     linker.func_wrap("g", "ca", graphics::set_canvas)?;
@@ -153,7 +154,7 @@ mod tests {
     #[test]
     fn smoke_test_linking() {
         let engine = wasmi::Engine::default();
-        let mut linker = <wasmi::Linker<State>>::new(&engine);
+        let mut linker = <wasmi::Linker<Box<State>>>::new(&engine);
         link(&mut linker, true).unwrap();
     }
 }
