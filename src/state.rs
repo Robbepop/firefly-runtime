@@ -129,7 +129,6 @@ impl<'a> State<'a> {
         let path = &["data", self.id.author(), self.id.app(), "stats"];
         let stream = match self.device.open_file(path) {
             Ok(file) => file,
-            Err(FSError::NotFound) => return Ok(()),
             Err(err) => return Err(Error::OpenFile(path.join("/"), err)),
         };
         let raw = match read_all(stream) {
@@ -261,6 +260,29 @@ impl<'a> State<'a> {
         if let Err(err) = res {
             let err = FSError::from(err);
             self.log_error(err);
+        }
+    }
+
+    /// Save into stats the stats from the current play.
+    ///
+    /// Called jut before saving the stats to the disk.
+    pub(crate) fn update_app_stats(&mut self) {
+        let players = self.player_count();
+        let idx = players - 1;
+        let Some(stats) = self.app_stats.as_mut() else {
+            return;
+        };
+        self.app_stats_dirty = true;
+        stats.launches[idx] += 1;
+    }
+
+    /// Get the number of players currently online.
+    fn player_count(&mut self) -> usize {
+        match self.net_handler.get_mut() {
+            NetHandler::None => 1,
+            NetHandler::Connector(connector) => connector.peer_infos().len(),
+            NetHandler::Connection(connection) => connection.peers.len(),
+            NetHandler::FrameSyncer(frame_syncer) => frame_syncer.peers.len(),
         }
     }
 

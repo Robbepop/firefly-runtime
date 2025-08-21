@@ -138,11 +138,11 @@ where
             wasm_bin
         };
 
-        let mut store = wasmi::Store::<Box<State<'a>>>::new(&engine, state);
+        let mut store = wasmi::Store::new(&engine, state);
         _ = store.set_fuel(FUEL_PER_CALL);
         let instance = {
             let module = wasmi::Module::new(&engine, wasm_bin)?;
-            let mut linker = wasmi::Linker::<Box<State>>::new(&engine);
+            let mut linker = wasmi::Linker::new(&engine);
             link(&mut linker, sudo)?;
             linker.instantiate_and_start(&mut store, &module)?
         };
@@ -331,6 +331,7 @@ where
         self.call_callback("before_exit", self.before_exit)?;
         let mut state = self.store.into_data();
         state.save_stash();
+        state.update_app_stats();
         state.save_app_stats();
         let net_handler = state.net_handler.replace(NetHandler::None);
         let config = RuntimeConfig {
