@@ -280,7 +280,7 @@ impl<'a> State<'a> {
     fn player_count(&mut self) -> usize {
         match self.net_handler.get_mut() {
             NetHandler::None => 1,
-            NetHandler::Connector(connector) => connector.peer_infos().len(),
+            NetHandler::Connector(connector) => connector.peer_infos().len() + 1,
             NetHandler::Connection(connection) => connection.peers.len(),
             NetHandler::FrameSyncer(frame_syncer) => frame_syncer.peers.len(),
         }
