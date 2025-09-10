@@ -193,31 +193,49 @@ impl Menu {
             return Ok(());
         }
         self.rendered = true;
-        let corners = CornerRadii::new(Size::new_equal(4));
-        let box_style = PrimitiveStyle::with_stroke(C::PRIMARY, 1);
+
         let mut black_style = MonoTextStyle::new(&FONT_6X9, C::PRIMARY);
         black_style.background_color = Some(C::BG);
         let mut blue_style = MonoTextStyle::new(&FONT_6X9, C::ACCENT);
         blue_style.background_color = Some(C::BG);
 
         display.clear(C::BG)?;
+        self.draw_cursor(display)?;
         let items = self.app_items.iter().chain(self.sys_items.iter());
         for (item, i) in items.zip(0..) {
             let point = Point::new(6, 9 + i * LINE_HEIGHT);
-            let text_style = match item {
-                MenuItem::Custom(_, _) => blue_style,
-                _ => black_style,
-            };
+            let is_custom = matches!(item, MenuItem::Custom(_, _));
+            let text_style = if is_custom { blue_style } else { black_style };
             let text = Text::new(item.as_str(), point, text_style);
             text.draw(display)?;
-
-            if i == self.selected {
-                let point = Point::new(3, 2 + i * LINE_HEIGHT);
-                let rect = Rectangle::new(point, Size::new(232, LINE_HEIGHT as u32));
-                let rect = RoundedRectangle::new(rect, corners);
-                rect.draw_styled(&box_style, display)?;
-            }
         }
+        Ok(())
+    }
+
+    /// Indicate which item is currently selected.
+    pub fn draw_cursor<D, C, E>(&mut self, display: &mut D) -> Result<(), E>
+    where
+        D: DrawTarget<Color = C, Error = E> + OriginDimensions,
+        C: RgbColor + FromRGB,
+    {
+        let i = self.selected;
+        let size = Size::new(232, LINE_HEIGHT as u32);
+        let corners = CornerRadii::new(Size::new_equal(4));
+
+        // Render shadow.
+        let box_style = PrimitiveStyle::with_fill(C::PRIMARY);
+        let point = Point::new(4, 3 + i * LINE_HEIGHT);
+        let rect = Rectangle::new(point, size);
+        let rect = RoundedRectangle::new(rect, corners);
+        rect.draw_styled(&box_style, display)?;
+
+        // Render the selection box.
+        let mut box_style = PrimitiveStyle::with_stroke(C::PRIMARY, 1);
+        box_style.fill_color = Some(C::BG);
+        let point = Point::new(3, 2 + i * LINE_HEIGHT);
+        let rect = Rectangle::new(point, size);
+        let rect = RoundedRectangle::new(rect, corners);
+        rect.draw_styled(&box_style, display)?;
         Ok(())
     }
 }
