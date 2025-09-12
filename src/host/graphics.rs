@@ -529,7 +529,7 @@ fn draw_image_inner(mut caller: C, ptr: u32, len: u32, x: i32, y: i32, sub: Opti
     // Read image header.
     // Bits per color pixel. Can be 1, 2, or 4.
     let bpp = u8::from_le_bytes([image_bytes[1]]);
-    // The image width. The height is inferred fro width, BPP, and byte size.
+    // The image width. The height is inferred from width, BPP, and byte size.
     let width = u16::from_le_bytes([image_bytes[2], image_bytes[3]]) as u32;
     // The color that should be omitted.
     // Used to encode transparency by sacrificing one color from the palette.

@@ -195,7 +195,7 @@ impl<'a> Connector<'a> {
             }
         }
         let mut name = intro.name;
-        if firefly_types::validate_name(&name).is_err() {
+        if firefly_types::validate_id(&name).is_err() {
             name = "anonymous".try_into().unwrap();
         }
         let info = PeerInfo {
@@ -240,7 +240,7 @@ impl<'a> Connector<'a> {
 
     fn send_intro(&mut self, _device: &DeviceImpl, addr: Addr) -> Result<(), NetcodeError> {
         let mut name = self.me.name.clone();
-        if firefly_types::validate_name(&name).is_err() {
+        if firefly_types::validate_id(&name).is_err() {
             name = "anonymous".try_into().unwrap();
         }
         let intro = Intro {
