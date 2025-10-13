@@ -9,7 +9,7 @@ use embedded_graphics::primitives::{
     CornerRadii, PrimitiveStyle, Rectangle, RoundedRectangle, StyledDrawable,
 };
 use embedded_graphics::text::Text;
-use firefly_hal::InputState;
+use firefly_hal::{BatteryStatus, InputState};
 
 const LINE_HEIGHT: i32 = 12;
 
@@ -209,7 +209,7 @@ impl Menu {
             let text = Text::new(item.as_str(), point, text_style);
             text.draw(display)?;
         }
-        Ok(())
+        self.draw_battery(display)
     }
 
     /// Indicate which item is currently selected.
@@ -236,6 +236,54 @@ impl Menu {
         let rect = Rectangle::new(point, size);
         let rect = RoundedRectangle::new(rect, corners);
         rect.draw_styled(&box_style, display)?;
+        Ok(())
+    }
+
+    /// Indicate which item is currently selected.
+    pub fn draw_battery<D, C, E>(&mut self, display: &mut D) -> Result<(), E>
+    where
+        D: DrawTarget<Color = C, Error = E> + OriginDimensions,
+        C: RgbColor + FromRGB,
+    {
+        let status = BatteryStatus {
+            voltage: 50,
+            connected: false,
+            full: false,
+        };
+        let percent = status.voltage;
+
+        let max_width: u32 = 20;
+        let height: u32 = 10;
+        let point = Point::new(240 - max_width as i32 - 7, 160 - height as i32 - 6);
+        let corners = CornerRadii::new(Size::new_equal(4));
+
+        {
+            let size = Size::new(max_width, height);
+            let mut box_style = PrimitiveStyle::with_stroke(C::PRIMARY, 1);
+            box_style.fill_color = Some(C::BG);
+            let rect = Rectangle::new(point, size);
+            let rect = RoundedRectangle::new(rect, corners);
+            rect.draw_styled(&box_style, display)?;
+        }
+        {
+            let size = Size::new(1, 4);
+            let box_style = PrimitiveStyle::with_fill(C::PRIMARY);
+            let point = point + Point::new(max_width as _, 3);
+            let rect = Rectangle::new(point, size);
+            rect.draw_styled(&box_style, display)?;
+        }
+
+        {
+            let width = max_width * u32::from(percent) / 100 + 1;
+            let width = width.clamp(1, max_width);
+            let size = Size::new(width, height);
+            let mut box_style = PrimitiveStyle::with_stroke(C::PRIMARY, 1);
+            box_style.fill_color = Some(C::ACCENT);
+            let rect = Rectangle::new(point, size);
+            let rect = RoundedRectangle::new(rect, corners);
+            rect.draw_styled(&box_style, display)?;
+        }
+
         Ok(())
     }
 }
