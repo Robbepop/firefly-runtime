@@ -6,7 +6,7 @@ use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::RgbColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{
-    CornerRadii, PrimitiveStyle, Rectangle, RoundedRectangle, StyledDrawable,
+    CornerRadii, PrimitiveStyle, Rectangle, RoundedRectangle, StyledDrawable, Triangle,
 };
 use embedded_graphics::text::Text;
 use firefly_hal::{BatteryStatus, InputState};
@@ -246,42 +246,65 @@ impl Menu {
         C: RgbColor + FromRGB,
     {
         let status = BatteryStatus {
-            voltage: 50,
+            voltage: 70,
             connected: false,
             full: false,
         };
         let percent = status.voltage;
 
         let max_width: u32 = 20;
-        let height: u32 = 10;
+        let height: u32 = 11;
         let point = Point::new(240 - max_width as i32 - 7, 160 - height as i32 - 6);
         let corners = CornerRadii::new(Size::new_equal(4));
 
+        // Draw charge percentage.
         {
-            let size = Size::new(max_width, height);
-            let mut box_style = PrimitiveStyle::with_stroke(C::PRIMARY, 1);
-            box_style.fill_color = Some(C::BG);
+            let width = max_width * u32::from(percent) / 100 + 1;
+            let width = width.clamp(1, max_width);
+            let width = if status.full { max_width } else { width };
+            let size = Size::new(width, height);
+            let box_style = PrimitiveStyle::with_fill(C::ACCENT);
             let rect = Rectangle::new(point, size);
             let rect = RoundedRectangle::new(rect, corners);
             rect.draw_styled(&box_style, display)?;
         }
+
+        // Draw box.
         {
-            let size = Size::new(1, 4);
+            let size = Size::new(max_width, height);
+            let box_style = PrimitiveStyle::with_stroke(C::PRIMARY, 1);
+            let rect = Rectangle::new(point, size);
+            let rect = RoundedRectangle::new(rect, corners);
+            rect.draw_styled(&box_style, display)?;
+        }
+
+        // Draw nibble on the right end.
+        {
+            let size = Size::new(1, 5);
             let box_style = PrimitiveStyle::with_fill(C::PRIMARY);
             let point = point + Point::new(max_width as _, 3);
             let rect = Rectangle::new(point, size);
             rect.draw_styled(&box_style, display)?;
         }
 
-        {
-            let width = max_width * u32::from(percent) / 100 + 1;
-            let width = width.clamp(1, max_width);
-            let size = Size::new(width, height);
-            let mut box_style = PrimitiveStyle::with_stroke(C::PRIMARY, 1);
-            box_style.fill_color = Some(C::ACCENT);
-            let rect = Rectangle::new(point, size);
-            let rect = RoundedRectangle::new(rect, corners);
-            rect.draw_styled(&box_style, display)?;
+        // Draw indicator of charging (a lighting).
+        if status.connected && !status.full {
+            let center = point + Point::new(max_width as i32 / 2, height as i32 / 2);
+            let style = PrimitiveStyle::with_fill(C::PRIMARY);
+
+            let triangle = Triangle::new(
+                Point::new(center.x - 6, center.y),
+                Point::new(center.x, center.y - 3),
+                center,
+            );
+            triangle.draw_styled(&style, display)?;
+
+            let triangle = Triangle::new(
+                Point::new(center.x, center.y + 3),
+                Point::new(center.x + 6, center.y),
+                center,
+            );
+            triangle.draw_styled(&style, display)?;
         }
 
         Ok(())
