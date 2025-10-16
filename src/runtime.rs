@@ -225,11 +225,19 @@ where
         // TODO: pause audio when opening menu
         let menu_is_active = state.menu.active();
         if menu_is_active {
+            if self.n_frames % 60 == 0 {
+                if let Some(battery) = &mut state.battery {
+                    let res = battery.update(&mut state.device);
+                    if let Err(err) = res {
+                        state.device.log_error("battery", err);
+                    }
+                }
+            }
             // We render the system menu directly on the screen,
             // bypassing the frame buffer. That way, we preserve
             // the frame buffer rendered by the app.
             // Performance isn't an issue for a simple text menu.
-            let res = state.menu.render(&mut self.display);
+            let res = state.menu.render(&mut self.display, &state.battery);
             if res.is_err() {
                 return Err(Error::CannotDisplay);
             }

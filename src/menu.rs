@@ -1,3 +1,4 @@
+use crate::battery::Battery;
 use crate::color::FromRGB;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{OriginDimensions, Point, Size};
@@ -9,7 +10,7 @@ use embedded_graphics::primitives::{
     CornerRadii, PrimitiveStyle, Rectangle, RoundedRectangle, StyledDrawable, Triangle,
 };
 use embedded_graphics::text::Text;
-use firefly_hal::{BatteryStatus, InputState};
+use firefly_hal::InputState;
 
 const LINE_HEIGHT: i32 = 12;
 
@@ -184,7 +185,7 @@ impl Menu {
         self.active = false;
     }
 
-    pub fn render<D, C, E>(&mut self, display: &mut D) -> Result<(), E>
+    pub fn render<D, C, E>(&mut self, display: &mut D, battery: &Option<Battery>) -> Result<(), E>
     where
         D: DrawTarget<Color = C, Error = E> + OriginDimensions,
         C: RgbColor + FromRGB,
@@ -209,7 +210,7 @@ impl Menu {
             let text = Text::new(item.as_str(), point, text_style);
             text.draw(display)?;
         }
-        self.draw_battery(display)
+        self.draw_battery(display, battery)
     }
 
     /// Indicate which item is currently selected.
@@ -240,18 +241,18 @@ impl Menu {
     }
 
     /// Indicate which item is currently selected.
-    pub fn draw_battery<D, C, E>(&mut self, display: &mut D) -> Result<(), E>
+    pub fn draw_battery<D, C, E>(
+        &mut self,
+        display: &mut D,
+        battery: &Option<Battery>,
+    ) -> Result<(), E>
     where
         D: DrawTarget<Color = C, Error = E> + OriginDimensions,
         C: RgbColor + FromRGB,
     {
-        let status = BatteryStatus {
-            voltage: 70,
-            connected: false,
-            full: false,
+        let Some(battery) = battery else {
+            return Ok(());
         };
-        let percent = status.voltage;
-
         let max_width: u32 = 20;
         let height: u32 = 11;
         let point = Point::new(240 - max_width as i32 - 7, 160 - height as i32 - 6);
@@ -259,9 +260,9 @@ impl Menu {
 
         // Draw charge percentage.
         {
-            let width = max_width * u32::from(percent) / 100 + 1;
+            let width = max_width * u32::from(battery.percent) / 100 + 1;
             let width = width.clamp(1, max_width);
-            let width = if status.full { max_width } else { width };
+            let width = if battery.full { max_width } else { width };
             let size = Size::new(width, height);
             let box_style = PrimitiveStyle::with_fill(C::ACCENT);
             let rect = Rectangle::new(point, size);
@@ -288,7 +289,7 @@ impl Menu {
         }
 
         // Draw indicator of charging (a lighting).
-        if status.connected && !status.full {
+        if battery.connected && !battery.full {
             let center = point + Point::new(max_width as i32 / 2, height as i32 / 2);
             let style = PrimitiveStyle::with_fill(C::PRIMARY);
 

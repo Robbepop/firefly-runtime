@@ -1,3 +1,4 @@
+use crate::battery::Battery;
 use crate::canvas::Canvas;
 use crate::color::Rgb16;
 use crate::config::FullID;
@@ -76,6 +77,9 @@ pub(crate) struct State<'a> {
     /// None if not cached.
     settings: Option<firefly_types::Settings>,
 
+    /// The battery status (State of Charge, aka SoC).
+    pub battery: Option<Battery>,
+
     pub app_stats: Option<firefly_types::Stats>,
     pub app_stats_dirty: bool,
     pub stash: alloc::vec::Vec<u8>,
@@ -100,6 +104,8 @@ impl<'a> State<'a> {
             NetHandler::FrameSyncer(syncer) => syncer.shared_seed,
             _ => 0,
         };
+        let mut device = device;
+        let maybe_battery = Battery::new(&mut device);
         Box::new(Self {
             device,
             id,
@@ -109,6 +115,7 @@ impl<'a> State<'a> {
             launcher,
             error: None,
             audio: firefly_audio::Manager::new(),
+            battery: maybe_battery.ok(),
             seed,
             lock_seed: false,
             memory: None,

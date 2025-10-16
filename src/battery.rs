@@ -1,5 +1,3 @@
-use core::f32::consts::E;
-
 use embedded_io::Write;
 use firefly_hal::{Device, DeviceImpl, FSError};
 use firefly_types::{BatteryInfo, Encode};
