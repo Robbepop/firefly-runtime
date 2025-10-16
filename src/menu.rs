@@ -260,11 +260,13 @@ impl Menu {
 
         // Draw charge percentage.
         {
-            let width = max_width * u32::from(battery.percent) / 100 + 1;
+            let percent = battery.percent;
+            let width = max_width * u32::from(percent) / 100 + 1;
             let width = width.clamp(1, max_width);
             let width = if battery.full { max_width } else { width };
             let size = Size::new(width, height);
-            let box_style = PrimitiveStyle::with_fill(C::ACCENT);
+            let color = if percent <= 20 { C::DANGER } else { C::ACCENT };
+            let box_style = PrimitiveStyle::with_fill(color);
             let rect = Rectangle::new(point, size);
             let rect = RoundedRectangle::new(rect, corners);
             rect.draw_styled(&box_style, display)?;

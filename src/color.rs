@@ -151,8 +151,10 @@ pub trait FromRGB {
     const BG: Self;
     /// The primary black text color.
     const PRIMARY: Self;
-    /// The dark blue accent color.
+    /// The dark green accent color.
     const ACCENT: Self;
+    /// The dark red danger color.
+    const DANGER: Self;
     /// The gray muted text color.
     const MUTED: Self;
 
@@ -162,7 +164,8 @@ pub trait FromRGB {
 impl FromRGB for Rgb16 {
     const BG: Self = Self::from_rgb(0xf4, 0xf4, 0xf4);
     const PRIMARY: Self = Self::from_rgb(0x1a, 0x1c, 0x2c);
-    const ACCENT: Self = Self::from_rgb(0x3b, 0x5d, 0xc9);
+    const ACCENT: Self = Self::from_rgb(0x38, 0xb7, 0x64);
+    const DANGER: Self = Self::from_rgb(0xb1, 0x3e, 0x53);
     const MUTED: Self = Self::from_rgb(0x94, 0xb0, 0xc2);
 
     fn from_rgb(rgb: Self) -> Self {
@@ -173,7 +176,8 @@ impl FromRGB for Rgb16 {
 impl FromRGB for Rgb565 {
     const BG: Self = new_rgb565(0xf4, 0xf4, 0xf4);
     const PRIMARY: Self = new_rgb565(0x1a, 0x1c, 0x2c);
-    const ACCENT: Self = new_rgb565(0x3b, 0x5d, 0xc9);
+    const ACCENT: Self = new_rgb565(0x38, 0xb7, 0x64);
+    const DANGER: Self = new_rgb565(0xb1, 0x3e, 0x53);
     const MUTED: Self = new_rgb565(0x94, 0xb0, 0xc2);
 
     fn from_rgb(rgb: Rgb16) -> Self {
@@ -185,7 +189,8 @@ impl FromRGB for Rgb565 {
 impl FromRGB for Rgb888 {
     const BG: Self = Self::new(0xf4, 0xf4, 0xf4);
     const PRIMARY: Self = Self::new(0x1a, 0x1c, 0x2c);
-    const ACCENT: Self = Self::new(0x3b, 0x5d, 0xc9);
+    const ACCENT: Self = Self::new(0x38, 0xb7, 0x64);
+    const DANGER: Self = Self::new(0xb1, 0x3e, 0x53);
     const MUTED: Self = Self::new(0x94, 0xb0, 0xc2);
 
     fn from_rgb(rgb: Rgb16) -> Self {
