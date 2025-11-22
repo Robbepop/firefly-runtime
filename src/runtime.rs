@@ -275,7 +275,10 @@ where
                 state.audio.write(audio_buf);
             }
         }
-        self.n_frames = (self.n_frames + 1) % (FPS * 4);
+
+        // Check if the app is lagging.
+        // Adjust, if needed, how often "render" is called.
+        // If we have time to spare, delay rendering to keep steady frame rate.
         if self.fast_frames >= FPS {
             self.render_every = (self.render_every - 1).max(1);
             self.fast_frames = 0;
@@ -284,8 +287,13 @@ where
             self.lagging_frames = 0;
         }
         self.delay();
+
         let state = self.store.data();
         let should_render = state.exit || self.n_frames % self.render_every == 0;
+        // The frame number must be updated after calculating "should_render"
+        // so that "render" is always called on the first "update" run
+        // (when the app is just launched).
+        self.n_frames = (self.n_frames + 1) % (FPS * 4);
         if should_render {
             let fuel_render = self.call_callback("render", self.render)?;
             if let Some(stats) = &mut self.stats {
