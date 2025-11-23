@@ -2,7 +2,7 @@ use crate::config::FullID;
 use crate::host::misc::*;
 use crate::state::{NetHandler, State};
 use alloc::boxed::Box;
-use firefly_hal::{DeviceConfig, DeviceImpl};
+use firefly_hal::{Device, DeviceConfig, DeviceImpl};
 use std::path::PathBuf;
 
 #[test]
@@ -89,9 +89,10 @@ fn make_store<'a>() -> wasmi::Store<Box<State<'a>>> {
         root,
         ..Default::default()
     };
-    let device = DeviceImpl::new(config);
+    let mut device = DeviceImpl::new(config);
+    let rom_dir = device.open_dir(&["sys"]).ok().unwrap();
     let id = FullID::from_str("test-author", "test-app").unwrap();
-    let state = State::new(id, device, NetHandler::None, false);
+    let state = State::new(id, device, rom_dir, NetHandler::None, false);
     wasmi::Store::new(&engine, state)
 }
 

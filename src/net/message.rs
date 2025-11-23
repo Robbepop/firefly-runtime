@@ -53,6 +53,7 @@ impl Message {
     }
 }
 
+/// A network request: a message that the device sends unprompted.
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Req {
     Hello,
@@ -66,11 +67,18 @@ pub(crate) enum Req {
     Disconnect,
 }
 
+/// A response to a request from another device.
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Resp {
     Intro(Intro),
+    /// Launch an app.
     Start(Start),
+    /// The app state sync, sent every frame when running an app.
     State(FrameState),
+    /// Tell other devices that this device's user has accepted the peers' list.
+    ///
+    /// Inlcudes the number of peers.
+    Ready(u8),
 }
 
 #[derive(Serialize, Deserialize)]

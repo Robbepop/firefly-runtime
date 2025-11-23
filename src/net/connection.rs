@@ -367,9 +367,9 @@ fn get_friend_id(device: &mut DeviceImpl, device_name: &str) -> Option<u16> {
         return None;
     }
     let device_name = device_name.as_bytes();
-    let path = &["sys", "friends"];
-    let Ok(mut stream) = device.open_file(path) else {
-        let mut stream = device.create_file(path).ok()?;
+    let mut dir = device.open_dir(&["sys"]).ok()?;
+    let Ok(mut stream) = dir.open_file("friends") else {
+        let mut stream = dir.create_file("friends").ok()?;
         stream.write(&[device_name.len() as u8]).ok()?;
         write_all(stream, device_name).ok()?;
         return Some(1);
@@ -395,7 +395,7 @@ fn get_friend_id(device: &mut DeviceImpl, device_name: &str) -> Option<u16> {
         i += 1;
     }
 
-    let mut stream = device.append_file(path).ok()?;
+    let mut stream = dir.append_file("friends").ok()?;
     stream.write(&[device_name.len() as u8]).ok()?;
     write_all(stream, device_name).ok()?;
     Some(i + 1)
@@ -406,9 +406,14 @@ pub(crate) fn make_intro(
     id: &FullID,
     seed: u32,
 ) -> Result<AppIntro, NetcodeError> {
-    // read stash file
-    let stash_path = &["data", id.author(), id.app(), "stash"];
-    let stash = match device.open_file(stash_path) {
+    let dir_path = &["data", id.author(), id.app()];
+    let mut dir = match device.open_dir(dir_path) {
+        Ok(dir) => dir,
+        Err(err) => return Err(NetcodeError::StashFileError(err)),
+    };
+
+    // Read stash file.
+    let stash = match dir.open_file("stash") {
         Ok(stream) => match read_all(stream) {
             Ok(stream) => stream,
             Err(err) => return Err(NetcodeError::StashFileError(err.into())),
@@ -417,8 +422,8 @@ pub(crate) fn make_intro(
         Err(err) => return Err(NetcodeError::StashFileError(err)),
     };
 
-    let stats_path = &["data", id.author(), id.app(), "stats"];
-    let stream = match device.open_file(stats_path) {
+    // Read stats file.
+    let stream = match dir.open_file("stats") {
         Ok(stream) => stream,
         Err(FSError::NotFound) => {
             return Ok(AppIntro {

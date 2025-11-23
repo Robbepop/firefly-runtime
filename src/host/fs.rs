@@ -3,7 +3,7 @@ use crate::utils::{read_into, write_all};
 use crate::{error::HostError, NetHandler};
 use alloc::boxed::Box;
 use embedded_io::Write;
-use firefly_hal::Device;
+use firefly_hal::{Device, Dir};
 use firefly_types::validate_path_part;
 
 type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
@@ -32,12 +32,19 @@ pub(crate) fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 
     let Some(name) = get_file_name(state, data, path_ptr, path_len) else {
         return 0;
     };
-    let path = &["roms", state.id.author(), state.id.app(), name];
-    if let Ok(size) = state.device.get_file_size(path) {
+    if let Ok(size) = state.rom_dir.get_file_size(name) {
         return size;
     }
-    let path = &["data", state.id.author(), state.id.app(), "etc", name];
-    match state.device.get_file_size(path) {
+
+    let dir_path = &["data", state.id.author(), state.id.app(), "etc"];
+    let mut dir = match state.device.open_dir(dir_path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
+    };
+    match dir.get_file_size(name) {
         Ok(size) => size,
         Err(err) => {
             state.log_error(err);
@@ -81,12 +88,18 @@ pub(crate) fn load_file(
         return 0;
     };
 
-    let path = &["roms", state.id.author(), state.id.app(), name];
-    let file = match state.device.open_file(path) {
+    let file = match state.rom_dir.open_file(name) {
         Ok(file) => file,
         Err(err) => {
-            let path = &["data", state.id.author(), state.id.app(), "etc", name];
-            let Ok(file) = state.device.open_file(path) else {
+            let dir_path = &["data", state.id.author(), state.id.app(), "etc"];
+            let mut dir = match state.device.open_dir(dir_path) {
+                Ok(dir) => dir,
+                Err(err) => {
+                    state.log_error(err);
+                    return 0;
+                }
+            };
+            let Ok(file) = dir.open_file(name) else {
                 state.log_error(err);
                 return 0;
             };
@@ -140,14 +153,20 @@ pub(crate) fn dump_file(
     };
 
     // reject writing into files that are already present in ROM to avoid shadowing
-    let path = &["roms", state.id.author(), state.id.app(), name];
-    if state.device.get_file_size(path).is_ok() {
+    if state.rom_dir.get_file_size(name).is_ok() {
         state.log_error(HostError::FileReadOnly);
         return 0;
     }
 
-    let path = &["data", state.id.author(), state.id.app(), "etc", name];
-    let mut file = match state.device.create_file(path) {
+    let dir_path = &["data", state.id.author(), state.id.app(), "etc"];
+    let mut dir = match state.device.open_dir(dir_path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
+    };
+    let mut file = match dir.create_file(name) {
         Ok(file) => file,
         Err(err) => {
             state.log_error(err);
@@ -188,14 +207,20 @@ pub(crate) fn remove_file(mut caller: C, path_ptr: u32, path_len: u32) {
     };
 
     // reject removing files that are already present in ROM to avoid shadowing
-    let path = &["roms", state.id.author(), state.id.app(), name];
-    if state.device.get_file_size(path).is_ok() {
+    if state.rom_dir.get_file_size(name).is_ok() {
         state.log_error(HostError::FileReadOnly);
         return;
     }
 
-    let path = &["data", state.id.author(), state.id.app(), "etc", name];
-    if let Err(err) = state.device.remove_file(path) {
+    let dir_path = &["data", state.id.author(), state.id.app(), "etc"];
+    let mut dir = match state.device.open_dir(dir_path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            state.log_error(err);
+            return;
+        }
+    };
+    if let Err(err) = dir.remove_file(name) {
         state.log_error(err);
     };
 }

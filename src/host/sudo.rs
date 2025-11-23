@@ -2,7 +2,7 @@ use crate::error::HostError;
 use crate::state::State;
 use crate::{config::FullID, utils::read_into};
 use alloc::boxed::Box;
-use firefly_hal::Device;
+use firefly_hal::{Device, Dir};
 use firefly_types::{validate_id, validate_path_part};
 use heapless::Vec;
 
@@ -43,8 +43,16 @@ pub(crate) fn list_dirs_buf_size(mut caller: C, path_ptr: u32, path_len: u32) ->
         }
     }
 
+    let mut dir = match state.device.open_dir(&path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
+    };
+
     let mut size = 0;
-    let res = state.device.iter_dir(&path, |_kind, entry_name| {
+    let res = dir.iter_dir(|_kind, entry_name| {
         size += entry_name.len() + 1;
     });
     if let Err(err) = res {
@@ -86,9 +94,17 @@ pub(crate) fn list_dirs(
         }
     }
 
+    let mut dir = match state.device.open_dir(&path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
+    };
+
     let mut pos = 0;
     let mut size_error = false;
-    let res = state.device.iter_dir(&path, |_kind, entry_name| {
+    let res = dir.iter_dir(|_kind, entry_name| {
         buf[pos] = entry_name.len() as u8;
         match buf.get_mut((pos + 1)..(pos + 1 + entry_name.len())) {
             Some(buf) => {
@@ -168,7 +184,20 @@ pub fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
             return 0;
         }
     }
-    match state.device.get_file_size(&path) {
+
+    let Some((file_name, dir_path)) = path.split_last() else {
+        state.log_error(HostError::FileNotFound);
+        return 0;
+    };
+    let mut dir = match state.device.open_dir(dir_path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
+    };
+
+    match dir.get_file_size(file_name) {
         Ok(file_size) => file_size,
         Err(err) => {
             // Don't log "file not found" error when the launcher requests
@@ -214,7 +243,19 @@ pub(crate) fn load_file(
         }
     }
 
-    let file = match state.device.open_file(&parts) {
+    let Some((file_name, dir_path)) = parts.split_last() else {
+        state.log_error(HostError::FileNotFound);
+        return 0;
+    };
+    let mut dir = match state.device.open_dir(dir_path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            state.log_error(err);
+            return 0;
+        }
+    };
+
+    let file = match dir.open_file(file_name) {
         Ok(file) => file,
         Err(err) => {
             state.log_error(err);

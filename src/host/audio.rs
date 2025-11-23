@@ -3,7 +3,7 @@ use crate::error::HostError;
 use crate::state::State;
 use alloc::boxed::Box;
 use firefly_audio::*;
-use firefly_hal::Device;
+use firefly_hal::Dir;
 
 type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 
@@ -75,8 +75,7 @@ pub(crate) fn add_file(mut caller: C, parent_id: u32, ptr: u32, len: u32) -> u32
     let Some(name) = get_file_name(state, data, ptr, len) else {
         return 0;
     };
-    let path = &["roms", state.id.author(), state.id.app(), name];
-    let reader = match state.device.open_file(path) {
+    let reader = match state.rom_dir.open_file(name) {
         Ok(reader) => reader,
         Err(err) => {
             state.log_error(err);

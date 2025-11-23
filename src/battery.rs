@@ -1,5 +1,5 @@
 use embedded_io::Write;
-use firefly_hal::{Device, DeviceImpl, FSError};
+use firefly_hal::{Device, DeviceImpl, Dir, FSError};
 use firefly_types::{BatteryInfo, Encode};
 
 use crate::utils::read_all;
@@ -69,7 +69,8 @@ impl Battery {
             max_voltage: self.max_voltage,
         };
         let buf = info.encode_vec().unwrap();
-        let mut file = device.create_file(&["sys", "battery"])?;
+        let mut dir = device.open_dir(&["sys"])?;
+        let mut file = dir.create_file("battery")?;
         file.write_all(&buf)?;
         Ok(())
     }
@@ -81,7 +82,8 @@ fn exp(v: f32) -> f32 {
 }
 
 fn ensure_info(device: &mut DeviceImpl) -> Result<BatteryInfo, FSError> {
-    let file = match device.open_file(&["sys", "battery"]) {
+    let mut dir = device.open_dir(&["sys"])?;
+    let file = match dir.open_file("battery") {
         Ok(file) => file,
         Err(FSError::NotFound) => return create_info(device),
         Err(err) => return Err(err),
@@ -100,7 +102,8 @@ fn create_info(device: &mut DeviceImpl) -> Result<BatteryInfo, FSError> {
         max_voltage: 4_200,
     };
     let buf = info.encode_vec().unwrap();
-    let mut file = device.create_file(&["sys", "battery"])?;
+    let mut dir = device.open_dir(&["sys"])?;
+    let mut file = dir.create_file("battery")?;
     file.write_all(&buf)?;
     Ok(info)
 }
@@ -116,7 +119,8 @@ mod tests {
         let mut battery = Battery::new(&mut device).ok().unwrap();
         battery.update(&mut device).ok().unwrap();
         assert!(battery.ok);
-        device.open_file(&["sys", "battery"]).ok().unwrap();
+        let mut dir = device.open_dir(&["sys"]).ok().unwrap();
+        dir.open_file("battery").ok().unwrap();
         // TODO(@orsinium): figure out a good way to mock out device voltage.
     }
 

@@ -30,6 +30,8 @@ pub(crate) struct State<'a> {
     /// Access to peripherals.
     pub device: DeviceImpl<'a>,
 
+    pub rom_dir: DirImpl,
+
     /// The app menu manager.
     pub menu: Menu,
 
@@ -98,6 +100,7 @@ impl<'a> State<'a> {
     pub(crate) fn new(
         id: FullID,
         device: DeviceImpl<'a>,
+        rom_dir: DirImpl,
         net_handler: NetHandler<'a>,
         launcher: bool,
     ) -> Box<Self> {
@@ -109,6 +112,7 @@ impl<'a> State<'a> {
         let maybe_battery = Battery::new(&mut device);
         Box::new(Self {
             device,
+            rom_dir,
             id,
             frame: FrameBuffer::new(),
             canvas: None,
@@ -136,14 +140,21 @@ impl<'a> State<'a> {
 
     /// Read app stats from FS.
     pub(crate) fn load_app_stats(&mut self) -> Result<(), Error> {
-        let path = &["data", self.id.author(), self.id.app(), "stats"];
-        let stream = match self.device.open_file(path) {
+        let dir_path = &["data", self.id.author(), self.id.app()];
+        // TODO(@orsinium): figure out prettier error handling
+        //     without more overhead. `anyhow`?
+        let mut dir = match self.device.open_dir(dir_path) {
+            Ok(dir) => dir,
+            Err(err) => return Err(Error::OpenDir(dir_path.join("/"), err)),
+        };
+
+        let stream = match dir.open_file("stats") {
             Ok(file) => file,
-            Err(err) => return Err(Error::OpenFile(path.join("/"), err)),
+            Err(err) => return Err(Error::OpenFile("stats", err)),
         };
         let raw = match read_all(stream) {
             Ok(raw) => raw,
-            Err(err) => return Err(Error::ReadFile(path.join("/"), err.into())),
+            Err(err) => return Err(Error::ReadFile("stats", err.into())),
         };
         let stats = match firefly_types::Stats::decode(&raw) {
             Ok(stats) => stats,
@@ -155,15 +166,20 @@ impl<'a> State<'a> {
 
     /// Read stash from FS.
     pub(crate) fn load_stash(&mut self) -> Result<(), Error> {
-        let path = &["data", self.id.author(), self.id.app(), "stash"];
-        let stream = match self.device.open_file(path) {
+        let dir_path = &["data", self.id.author(), self.id.app()];
+        let mut dir = match self.device.open_dir(dir_path) {
+            Ok(dir) => dir,
+            Err(err) => return Err(Error::OpenDir(dir_path.join("/"), err)),
+        };
+
+        let stream = match dir.open_file("stash") {
             Ok(file) => file,
             Err(FSError::NotFound) => return Ok(()),
-            Err(err) => return Err(Error::OpenFile(path.join("/"), err)),
+            Err(err) => return Err(Error::OpenFile("stash", err)),
         };
         let res = read_all_into(stream, &mut self.stash);
         if let Err(err) = res {
-            return Err(Error::ReadFile(path.join("/"), err.into()));
+            return Err(Error::ReadFile("stash", err.into()));
         };
         Ok(())
     }
@@ -218,26 +234,31 @@ impl<'a> State<'a> {
     }
 
     fn load_settings(&mut self) -> Option<firefly_types::Settings> {
-        let path = &["sys", "config"];
-        let file = match self.device.open_file(path) {
+        let mut dir = match self.device.open_dir(&["sys"]) {
+            Ok(dir) => dir,
+            Err(err) => {
+                self.device.log_error("settings", err);
+                return None;
+            }
+        };
+        let file = match dir.open_file("config") {
             Ok(file) => file,
-            Err(_) => {
-                self.device.log_error("settings", "failed to open settings");
+            Err(err) => {
+                self.device.log_error("settings", err);
                 return None;
             }
         };
         let raw = match read_all(file) {
             Ok(raw) => raw,
-            Err(_) => {
-                self.device.log_error("settings", "failed to read settings");
+            Err(err) => {
+                self.device.log_error("settings", err);
                 return None;
             }
         };
         let settings = match firefly_types::Settings::decode(&raw[..]) {
             Ok(settings) => settings,
-            Err(_) => {
-                self.device
-                    .log_error("settings", "failed to parse settings");
+            Err(err) => {
+                self.device.log_error("settings", err);
                 return None;
             }
         };
@@ -249,18 +270,25 @@ impl<'a> State<'a> {
         if !self.stash_dirty {
             return;
         }
-        let stash_path = &["data", self.id.author(), self.id.app(), "stash"];
+        let dir_path = &["data", self.id.author(), self.id.app()];
+        let mut dir = match self.device.open_dir(dir_path) {
+            Ok(dir) => dir,
+            Err(err) => {
+                self.device.log_error("stash", err);
+                return;
+            }
+        };
 
         // If the stash is empty, remove the stash file instead of storing an empty file.
         if self.stash.is_empty() {
-            let res = self.device.remove_file(stash_path);
+            let res = dir.remove_file("stash");
             if let Err(err) = res {
                 self.device.log_error("stash", err);
             }
             return;
         };
 
-        let mut stream = match self.device.create_file(stash_path) {
+        let mut stream = match dir.create_file("stash") {
             Ok(stream) => stream,
             Err(err) => {
                 self.device.log_error("stash", err);
@@ -312,8 +340,15 @@ impl<'a> State<'a> {
                 return;
             }
         };
-        let stats_path = &["data", self.id.author(), self.id.app(), "stats"];
-        let mut stream = match self.device.create_file(stats_path) {
+        let dir_path = &["data", self.id.author(), self.id.app()];
+        let mut dir = match self.device.open_dir(dir_path) {
+            Ok(dir) => dir,
+            Err(err) => {
+                self.device.log_error("stats", err);
+                return;
+            }
+        };
+        let mut stream = match dir.create_file("stats") {
             Ok(stream) => stream,
             Err(err) => {
                 self.device.log_error("stats", err);
@@ -529,18 +564,23 @@ impl<'a> State<'a> {
 
     /// Save the current frame buffer into a PNG file.
     pub fn take_screenshot(&mut self) {
-        let old_app = self.called;
-        self.called = "take screenshot";
         let dir_path = &["data", self.id.author(), self.id.app(), "shots"];
+        let mut dir = match self.device.open_dir(dir_path) {
+            Ok(dir) => dir,
+            Err(err) => {
+                self.device.log_error("shot", err);
+                return;
+            }
+        };
+
         let mut index = 1;
-        _ = self.device.iter_dir(dir_path, |_, _| index += 1);
+        _ = dir.iter_dir(|_, _| index += 1);
         let file_name = alloc::format!("{index:03}.ffs");
-        let path = &["data", self.id.author(), self.id.app(), "shots", &file_name];
-        let mut file = match self.device.create_file(path) {
+
+        let mut file = match dir.create_file(&file_name) {
             Ok(file) => file,
             Err(err) => {
                 self.device.log_error("shot", err);
-                self.called = old_app;
                 return;
             }
         };
@@ -549,7 +589,6 @@ impl<'a> State<'a> {
             let err: firefly_hal::FSError = err.into();
             self.device.log_error("shot", err);
         }
-        self.called = old_app;
     }
 
     pub fn connect(&mut self) {

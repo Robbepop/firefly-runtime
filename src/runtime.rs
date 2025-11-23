@@ -65,14 +65,18 @@ where
         };
         id.validate()?;
 
-        let meta_path = &["roms", id.author(), id.app(), "_meta"];
-        let file = match config.device.open_file(meta_path) {
+        let rom_path = &["roms", id.author(), id.app()];
+        let mut rom_dir = match config.device.open_dir(rom_path) {
+            Ok(dir) => dir,
+            Err(err) => return Err(Error::OpenDir(rom_path.join("/"), err)),
+        };
+        let file = match rom_dir.open_file("_meta") {
             Ok(file) => file,
-            Err(err) => return Err(Error::OpenFile(meta_path.join("/"), err)),
+            Err(err) => return Err(Error::OpenFile("_meta", err)),
         };
         let bytes = match read_all(file) {
             Ok(bytes) => bytes,
-            Err(err) => return Err(Error::ReadFile(meta_path.join("/"), err.into())),
+            Err(err) => return Err(Error::ReadFile("_meta", err.into())),
         };
         let meta = match Meta::decode(&bytes[..]) {
             Ok(meta) => meta,
@@ -93,12 +97,11 @@ where
             return Err(Error::SerialStart(err));
         }
         let now = config.device.now();
-        let bin_path = &["roms", id.author(), id.app(), "_bin"];
 
-        let bin_size = match config.device.get_file_size(bin_path) {
-            Ok(0) => Err(Error::FileEmpty(bin_path.join("/"))),
+        let bin_size = match rom_dir.get_file_size("_bin") {
+            Ok(0) => Err(Error::FileEmpty("_bin")),
             Ok(bin_size) => Ok(bin_size),
-            Err(err) => Err(Error::OpenFile(bin_path.join("/"), err)),
+            Err(err) => Err(Error::OpenFile("_bin", err)),
         }?;
 
         let engine = {
@@ -111,15 +114,21 @@ where
             wasmi::Engine::new(&wasmi_config)
         };
 
-        let mut state = State::new(id.clone(), config.device, config.net_handler, launcher);
+        let mut state = State::new(
+            id.clone(),
+            config.device,
+            rom_dir,
+            config.net_handler,
+            launcher,
+        );
         state.load_app_stats()?;
         state.load_stash()?;
 
         // Load the binary wasm file into PSRAM.
         let wasm_bin = {
-            let mut stream = match state.device.open_file(bin_path) {
+            let mut stream = match state.rom_dir.open_file("_bin") {
                 Ok(stream) => Ok(stream),
-                Err(err) => Err(Error::OpenFile(bin_path.join("/"), err)),
+                Err(err) => Err(Error::OpenFile("_bin", err)),
             }?;
             let bin_size = bin_size as usize;
             let mut wasm_bin = state.device.alloc_psram(bin_size);
@@ -128,11 +137,11 @@ where
                 Ok(_) => {}
                 Err(embedded_io::ReadExactError::UnexpectedEof) => {
                     let err = FSError::AllocationError;
-                    return Err(Error::OpenFile(bin_path.join("/"), err));
+                    return Err(Error::OpenFile("_bin", err));
                 }
                 Err(embedded_io::ReadExactError::Other(err)) => {
                     let err = FSError::from(err);
-                    return Err(Error::OpenFile(bin_path.join("/"), err));
+                    return Err(Error::OpenFile("_bin", err));
                 }
             }
             wasm_bin
@@ -524,15 +533,15 @@ where
 }
 
 fn detect_launcher(device: &mut DeviceImpl) -> Option<FullID> {
-    if let Some(id) = get_short_meta("launcher", device) {
+    let mut dir = device.open_dir(&["sys"]).ok()?;
+    if let Some(id) = get_short_meta(&mut dir, "launcher") {
         return Some(id);
     }
-    get_short_meta("new-app", device)
+    get_short_meta(&mut dir, "new-app")
 }
 
-fn get_short_meta(fname: &str, device: &mut DeviceImpl) -> Option<FullID> {
-    let path = &["sys", fname];
-    let file = device.open_file(path).ok()?;
+fn get_short_meta(dir: &mut DirImpl, fname: &str) -> Option<FullID> {
+    let file = dir.open_file(fname).ok()?;
     let bytes = read_all(file).ok()?;
     let meta = ShortMeta::decode(&bytes[..]).ok()?;
     let author = meta.author_id.try_into().ok()?;
