@@ -178,6 +178,13 @@ where
         Ok(runtime)
     }
 
+    /// Set how often `render` should be called relative to `update`.
+    ///
+    /// Exposed excludively for firefly-test to combat FPS auto-adjustment.
+    pub fn set_render_every(&mut self, render_every: u8) {
+        self.render_every = render_every;
+    }
+
     pub fn display_mut(&mut self) -> &mut D {
         &mut self.display
     }
