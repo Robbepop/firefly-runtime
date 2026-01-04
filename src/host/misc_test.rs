@@ -84,7 +84,7 @@ fn wrap_input(a: &[i32]) -> Vec<wasmi::Val> {
 
 fn make_store<'a>() -> wasmi::Store<Box<State<'a>>> {
     let engine = wasmi::Engine::default();
-    let root = PathBuf::from("/tmp");
+    let root = get_vfs();
     let config = DeviceConfig {
         root,
         ..Default::default()
@@ -94,6 +94,12 @@ fn make_store<'a>() -> wasmi::Store<Box<State<'a>>> {
     let id = FullID::from_str("test-author", "test-app").unwrap();
     let state = State::new(id, device, rom_dir, NetHandler::None, false);
     wasmi::Store::new(&engine, state)
+}
+
+fn get_vfs() -> PathBuf {
+    let root = std::env::temp_dir();
+    _ = std::fs::create_dir(root.join("sys"));
+    root
 }
 
 fn make_memory(store: &mut wasmi::Store<Box<State>>) -> wasmi::Memory {

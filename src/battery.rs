@@ -126,6 +126,7 @@ mod tests {
 
     fn new_device<'a>() -> DeviceImpl<'a> {
         let root = std::env::temp_dir().join("test_battery");
+        _ = std::fs::create_dir_all(root.join("sys"));
         let config = DeviceConfig {
             root,
             ..Default::default()
