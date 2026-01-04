@@ -9,10 +9,8 @@ core2 = { version = "0.4.0", default-features = false }
 embedded-graphics = "0.8.1"
 embedded-io = "0.6.1"
 firefly-audio = "0.2.0"
-# firefly-hal = "0.2.0"
-firefly-hal = { path = "../../firefly-hal" }
-# firefly-types = { version = "0.6.1" }
-firefly-types = { path = "../../firefly-types" }
+firefly-hal = "0.3.0"
+firefly-types = { version = "0.7.1" }
 heapless = { version = "0.8.0", features = ["serde"] }
 micromath = "2.1.0"
 postcard = "1.0.8"
