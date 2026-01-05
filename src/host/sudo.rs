@@ -202,7 +202,7 @@ pub fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
         Err(err) => {
             // Don't log "file not found" error when the launcher requests
             // a splash screen but the app doesn't have one.
-            if path.last() != Some(&"_splash") {
+            if *file_name != "_splash" {
                 state.log_error(HostError::FileRead(err));
             }
             0
