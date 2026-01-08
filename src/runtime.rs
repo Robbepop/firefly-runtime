@@ -259,14 +259,15 @@ where
             }
             self.delay();
             return Ok(false);
-        } else if menu_was_active {
+        } else if menu_was_active && self.render.is_none() {
             // When menu was open but now closed, if the app doesn't have the `render`
             // callback defined, the screen flushing will never be called.
             // As a result, the menu image will stuck on the display.
-            // To avoid that, fill the screen with black.
+            // To avoid that, we fill the screen with a color.
             //
-            // Why not white? To avoid flashing that can cause epilepsy episode.
-            _ = self.display.clear(C::BLACK);
+            // The color is the same as the menu background color
+            // to avoid flashing that may cause an epilepsy episode.
+            _ = self.display.clear(C::BG);
         }
 
         // If a custom menu item is selected, trigger the handle_menu callback.
