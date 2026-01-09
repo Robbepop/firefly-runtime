@@ -404,6 +404,10 @@ pub(crate) fn draw_text(
         state.log_error(HostError::OomPointer);
         return;
     };
+    if font_ptr == 0 {
+        state.log_error("font is a nil pointer: make sure you've loaded it");
+        return;
+    }
     let Some(font_bytes) = &data.get(font_ptr..(font_ptr + font_len)) else {
         state.log_error(HostError::OomPointer);
         return;
@@ -513,7 +517,14 @@ fn draw_image_inner(mut caller: C, ptr: u32, len: u32, x: i32, y: i32, sub: Opti
         return;
     };
     if image_bytes.len() < 7 {
-        state.log_error("image file is too small");
+        let msg = if ptr == 0 {
+            "image is a nil pointer: make sure you've loaded it"
+        } else if image_bytes.is_empty() {
+            "image file is empty: make sure you load it with the correct name"
+        } else {
+            "image file is too small"
+        };
+        state.log_error(msg);
         return;
     }
 
@@ -616,7 +627,12 @@ fn get_shape_style(fill_color: u32, stroke_color: u32, stroke_width: u32) -> Pri
 /// Load mono font from the firefly format.
 fn parse_font(bytes: &'_ [u8]) -> Result<MonoFont<'_>, &'static str> {
     if bytes.len() < 10 {
-        return Err("file too short");
+        let msg = if bytes.is_empty() {
+            "font is empty: make sure you load it with a correct name"
+        } else {
+            "font is too short"
+        };
+        return Err(msg);
     }
 
     // read the header
