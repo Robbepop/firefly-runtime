@@ -15,6 +15,27 @@ const PPB: usize = 8 / BPP;
 /// Bytes needed to store all pixels.
 const BUFFER_SIZE: usize = WIDTH * HEIGHT / PPB;
 
+// https://lospec.com/palette-list/sweetie-16
+// https://github.com/nesbox/TIC-80/wiki/Palette
+const DEFAULT_PALETTE: [Rgb16; 16] = [
+    Rgb16::from_rgb(0x1a, 0x1c, 0x2c), // black
+    Rgb16::from_rgb(0x5d, 0x27, 0x5d), // purple
+    Rgb16::from_rgb(0xb1, 0x3e, 0x53), // red
+    Rgb16::from_rgb(0xef, 0x7d, 0x57), // orange
+    Rgb16::from_rgb(0xff, 0xcd, 0x75), // yellow
+    Rgb16::from_rgb(0xa7, 0xf0, 0x70), // light green
+    Rgb16::from_rgb(0x38, 0xb7, 0x64), // green
+    Rgb16::from_rgb(0x25, 0x71, 0x79), // dark green
+    Rgb16::from_rgb(0x29, 0x36, 0x6f), // dark blue
+    Rgb16::from_rgb(0x3b, 0x5d, 0xc9), // blue
+    Rgb16::from_rgb(0x41, 0xa6, 0xf6), // light blue
+    Rgb16::from_rgb(0x73, 0xef, 0xf7), // cyan
+    Rgb16::from_rgb(0xf4, 0xf4, 0xf4), // white
+    Rgb16::from_rgb(0x94, 0xb0, 0xc2), // light gray
+    Rgb16::from_rgb(0x56, 0x6c, 0x86), // gray
+    Rgb16::from_rgb(0x33, 0x3c, 0x57), // dark gray
+];
+
 pub trait RenderFB {
     type Error;
     fn render_fb(&mut self, frame: &mut FrameBuffer) -> Result<(), Self::Error>;
@@ -32,26 +53,7 @@ impl FrameBuffer {
     pub(crate) fn new() -> Self {
         Self {
             data: Box::new([0; BUFFER_SIZE]),
-            palette: [
-                // https://lospec.com/palette-list/sweetie-16
-                // https://github.com/nesbox/TIC-80/wiki/Palette
-                Rgb16::from_rgb(0x1a, 0x1c, 0x2c), // black
-                Rgb16::from_rgb(0x5d, 0x27, 0x5d), // purple
-                Rgb16::from_rgb(0xb1, 0x3e, 0x53), // red
-                Rgb16::from_rgb(0xef, 0x7d, 0x57), // orange
-                Rgb16::from_rgb(0xff, 0xcd, 0x75), // yellow
-                Rgb16::from_rgb(0xa7, 0xf0, 0x70), // light green
-                Rgb16::from_rgb(0x38, 0xb7, 0x64), // green
-                Rgb16::from_rgb(0x25, 0x71, 0x79), // dark green
-                Rgb16::from_rgb(0x29, 0x36, 0x6f), // dark blue
-                Rgb16::from_rgb(0x3b, 0x5d, 0xc9), // blue
-                Rgb16::from_rgb(0x41, 0xa6, 0xf6), // light blue
-                Rgb16::from_rgb(0x73, 0xef, 0xf7), // cyan
-                Rgb16::from_rgb(0xf4, 0xf4, 0xf4), // white
-                Rgb16::from_rgb(0x94, 0xb0, 0xc2), // light gray
-                Rgb16::from_rgb(0x56, 0x6c, 0x86), // gray
-                Rgb16::from_rgb(0x33, 0x3c, 0x57), // dark gray
-            ],
+            palette: DEFAULT_PALETTE,
             dirty: false,
         }
     }
