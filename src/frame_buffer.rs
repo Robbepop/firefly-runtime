@@ -66,6 +66,10 @@ impl FrameBuffer {
         })
     }
 
+    /// Optimized rendering of horizontal line.
+    ///
+    /// Must behave exactly like embedded-graphics with the same parameters
+    /// but damn faster.
     pub(crate) fn draw_hline(&mut self, x1: i32, x2: i32, y: i32, w: u32, c: Gray4) {
         let mut left = x1;
         let mut right = x2;
@@ -137,8 +141,8 @@ impl DrawTarget for FrameBuffer {
 
         let left_fract = left_x % 2 == 1;
         let right_fract = right_x % 2 == 1;
-        let start_x = left_x + if left_fract { 1 } else { 0 };
-        let end_x = right_x - if right_fract { 1 } else { 0 };
+        let start_x = left_x + usize::from(left_fract);
+        let end_x = right_x - usize::from(right_fract);
         let width = end_x - start_x;
         debug_assert_eq!(width % 2, 0);
 
@@ -212,14 +216,12 @@ impl FrameBuffer {
         let byte_index = pixel_index / PPB;
         let shift = if pixel_index.is_multiple_of(2) { 0 } else { 4 };
         let mask = !(0b1111 << shift);
-        let byte = self.data[byte_index];
+        // Safety: if y within WIDTH and HEIGHT (which we checked),
+        // the byte_index is is within the buffer.
+        let byte = unsafe { self.data.get_unchecked_mut(byte_index) };
         let color = color.into_storage();
         debug_assert!(color < 16);
-        let new_byte = (color << shift) | (byte & mask);
-        if new_byte == byte {
-            return;
-        }
-        self.data[byte_index] = new_byte
+        *byte = (color << shift) | (*byte & mask);
     }
 }
 
@@ -253,10 +255,6 @@ where
 
 /// Duplicate the color and pack into 1 byte.
 fn color_to_byte(c: &Gray4) -> u8 {
-    let mut new_byte = 0;
     let luma = c.into_storage();
-    for _ in 0..PPB {
-        new_byte = (new_byte << BPP) | luma;
-    }
-    new_byte
+    luma | (luma << 4)
 }
