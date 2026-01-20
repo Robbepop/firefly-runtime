@@ -937,7 +937,7 @@ dependencies = [
 
 [[package]]
 name = "firefly-runtime"
-version = "0.1.0"
+version = "0.9.1"
 dependencies = [
  "embedded-graphics",
  "embedded-io 0.6.1",
