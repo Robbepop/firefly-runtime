@@ -3,6 +3,9 @@ name = "firefly-runtime"
 version = "0.1.0"
 rust-version = "1.89.0"
 edition = "2021"
+description = "The beating heart of firefly Zero"
+license = "GPL-3.0"
+repository = "https://github.com/firefly-zero/firefly-runtime"
 
 [dependencies]
 embedded-graphics = "0.8.1"
