@@ -1,0 +1,20 @@
+# https://taskfile.dev
+version: "3"
+
+tasks:
+  test:
+    cmds:
+      - cargo test
+  lint:
+    cmds:
+      - cargo clippy
+  format:
+    cmds:
+      - cargo fmt
+  all:
+    cmds:
+      - task: format
+      - task: lint
+      - task: test
+  default:
+    - task: all
