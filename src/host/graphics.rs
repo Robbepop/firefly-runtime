@@ -676,15 +676,26 @@ fn draw_4bpp_fast(
         image = sub_image;
     }
 
-    for byte in image {
+    // Skip the right out-of-bounds part of the image.
+    let mut right_x = point.x + width as i32;
+    let mut skip_right: usize = 0;
+    if right_x > WIDTH as i32 {
+        skip_right = (right_x - WIDTH as i32) as usize / PPB;
+        right_x = WIDTH as i32;
+    }
+
+    let mut i = 0;
+    while i < image.len() {
+        let byte = image[i];
         let c1 = usize::from((byte >> 4) & 0x0F);
         if let Some(c1) = swaps[c1] {
             frame.set_pixel(p, c1);
         };
         p.x += 1;
-        if p.x - point.x >= width as i32 {
+        if p.x >= right_x {
             p.x = point.x;
             p.y += 1;
+            i += skip_right;
         }
 
         let c2 = usize::from(byte & 0x0F);
@@ -692,10 +703,12 @@ fn draw_4bpp_fast(
             frame.set_pixel(p, c2);
         };
         p.x += 1;
-        if p.x - point.x >= width as i32 {
+        if p.x >= right_x {
             p.x = point.x;
             p.y += 1;
+            i += skip_right;
         }
+        i += 1;
     }
 }
 
