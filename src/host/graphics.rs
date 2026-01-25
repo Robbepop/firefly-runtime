@@ -649,8 +649,20 @@ fn draw_4bpp_fast(
     point: Point,
     frame: &mut FrameBuffer,
 ) {
-    let mut p = point;
     let swaps = parse_swaps(transp, swaps);
+    let mut p = point;
+
+    let mut image = image;
+    // Cut the top out-of-bounds part of the image.
+    if p.y < 0 {
+        let start_i = (-p.y * width as i32) as usize / 2;
+        let Some(sub_image) = image.get(start_i..) else {
+            return;
+        };
+        image = sub_image;
+        p.y = 0;
+    }
+
     for byte in image {
         let c1 = usize::from((byte >> 4) & 0x0F);
         if let Some(c1) = swaps[c1] {
@@ -662,7 +674,7 @@ fn draw_4bpp_fast(
             p.y += 1;
         }
 
-        let c2 = usize::from((byte) & 0x0F);
+        let c2 = usize::from(byte & 0x0F);
         if let Some(c2) = swaps[c2] {
             frame.set_pixel(p, c2);
         };
