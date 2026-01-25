@@ -11,6 +11,7 @@ mod error;
 mod error_scene;
 mod frame_buffer;
 mod host;
+mod image;
 mod linking;
 mod menu;
 mod net;
