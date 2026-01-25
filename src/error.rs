@@ -1,3 +1,4 @@
+use crate::linking::LinkingError;
 use core::fmt;
 
 pub enum Error {
@@ -14,8 +15,7 @@ pub enum Error {
     AuthorIDMismatch,
     AppIDMismatch,
 
-    UsedDisabledSudoHostFunction,
-    UnknownHostFunction,
+    Linking(LinkingError),
 
     DecodeMeta(postcard::Error),
     DecodeStats(postcard::Error),
@@ -67,8 +67,7 @@ impl fmt::Display for Error {
             Error::ReadFile(name, err) => write!(f, "cannot read {name}: {err}"),
             Error::AuthorIDMismatch => write!(f, "author ID in meta and in path don't match"),
             Error::AppIDMismatch => write!(f, "app ID in meta and in path don't match"),
-            Error::UsedDisabledSudoHostFunction => write!(f, "used disabled sudo host function"),
-            Error::UnknownHostFunction => write!(f, "unknown host function"),
+            Error::Linking(err) => write!(f, "linking: {err}"),
             Error::DecodeMeta(err) => write!(f, "cannot decode _meta: {err}"),
             Error::DecodeStats(err) => write!(f, "cannot decode stats: {err}"),
             Error::SerialEncode(err) => write!(f, "cannot encode response for serial: {err}"),
@@ -85,6 +84,12 @@ impl fmt::Display for Error {
 impl From<wasmi::Error> for Error {
     fn from(value: wasmi::Error) -> Self {
         Self::Wasmi(value)
+    }
+}
+
+impl From<LinkingError> for Error {
+    fn from(value: LinkingError) -> Self {
+        Self::Linking(value)
     }
 }
 
