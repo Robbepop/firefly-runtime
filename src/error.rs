@@ -14,6 +14,9 @@ pub enum Error {
     AuthorIDMismatch,
     AppIDMismatch,
 
+    UsedDisabledSudoHostFunction,
+    UnknownHostFunction,
+
     DecodeMeta(postcard::Error),
     DecodeStats(postcard::Error),
     SerialEncode(postcard::Error),
@@ -64,6 +67,8 @@ impl fmt::Display for Error {
             Error::ReadFile(name, err) => write!(f, "cannot read {name}: {err}"),
             Error::AuthorIDMismatch => write!(f, "author ID in meta and in path don't match"),
             Error::AppIDMismatch => write!(f, "app ID in meta and in path don't match"),
+            Error::UsedDisabledSudoHostFunction => write!(f, "used disabled sudo host function"),
+            Error::UnknownHostFunction => write!(f, "unknown host function"),
             Error::DecodeMeta(err) => write!(f, "cannot decode _meta: {err}"),
             Error::DecodeStats(err) => write!(f, "cannot decode stats: {err}"),
             Error::SerialEncode(err) => write!(f, "cannot encode response for serial: {err}"),
