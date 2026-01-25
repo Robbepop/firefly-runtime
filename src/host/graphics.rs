@@ -681,19 +681,15 @@ fn draw_4bpp_fast(
     let mut right_x = point.x + width as i32;
     if right_x > WIDTH as i32 {
         let skip_px = (right_x - WIDTH as i32) as usize;
-        if skip_px.is_multiple_of(PPB) {
-            skip = skip_px / PPB;
-            right_x = WIDTH as i32;
-        }
+        skip = skip_px / PPB;
+        right_x = WIDTH as i32 + (skip_px % PPB) as i32;
     }
     // Skip the left out-of-bounds part of the image.
     let mut left_x = point.x;
     if left_x < 0 {
         let skip_px = -left_x as usize;
-        if skip_px.is_multiple_of(PPB) {
-            skip += skip_px / PPB;
-            left_x = 0;
-        }
+        skip += skip_px / PPB;
+        left_x = -((skip_px % PPB) as i32);
     }
 
     let mut i = 0;
