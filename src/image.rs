@@ -114,7 +114,7 @@ impl ParsedImage<'_> {
         let mut i = 0;
         while i < image.len() {
             let byte = image[i];
-            let c1 = usize::from((byte >> 4) & 0x0F);
+            let c1 = usize::from((byte >> 4) & 0x0f);
             if let Some(c1) = swaps[c1] {
                 frame.set_pixel(p, c1);
             };
@@ -125,7 +125,7 @@ impl ParsedImage<'_> {
                 i += skip;
             }
 
-            let c2 = usize::from(byte & 0x0F);
+            let c2 = usize::from(byte & 0x0f);
             if let Some(c2) = swaps[c2] {
                 frame.set_pixel(p, c2);
             };
