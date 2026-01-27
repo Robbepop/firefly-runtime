@@ -363,6 +363,52 @@ fn test_draw_image_oob_left2() {
 }
 
 #[test]
+fn test_draw_image_oob_right1() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 240 - 3, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display_at(
+        Point::new(240 - 6, 0),
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            "....PR", // y=2
+            "...YgG", // y=3
+            "...dBb", // y=4
+            "...W◔◑", // y=5
+            "......", // y=6
+        ],
+    );
+}
+
+#[test]
+fn test_draw_image_oob_right2() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 240 - 2, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display_at(
+        Point::new(240 - 6, 0),
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            ".....P", // y=2
+            "....Yg", // y=3
+            "....dB", // y=4
+            "....W◔", // y=5
+            "......", // y=6
+        ],
+    );
+}
+
+#[test]
 fn test_draw_image_oob_top() {
     let mut store = make_store();
     let func = wasmi::Func::wrap(&mut store, draw_image);
@@ -377,6 +423,26 @@ fn test_draw_image_oob_top() {
             ".dBbC.", // y=1
             ".W◔◑◕.", // y=2
             "......", // y=3
+        ],
+    );
+}
+
+#[test]
+fn test_draw_image_oob_bottom() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 1, 160 - 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display_at(
+        Point::new(0, 160 - 4),
+        &state.frame,
+        &[
+            "......", // y=156
+            "......", // y=157
+            "..PRO.", // y=158
+            ".YgGD.", // y=159
         ],
     );
 }
@@ -401,10 +467,13 @@ fn wrap_input(a: &[i32]) -> Vec<wasmi::Val> {
 }
 
 fn check_display(frame: &FrameBuffer, pattern: &[&str]) {
-    for (line, y) in pattern.iter().zip(0..) {
-        for (expected, x) in line.chars().zip(0..) {
-            let point = Point::new(x, y);
-            let actual = get_fb_char(frame, point);
+    check_display_at(Point::zero(), frame, pattern);
+}
+
+fn check_display_at(point: Point, frame: &FrameBuffer, pattern: &[&str]) {
+    for (line, y) in pattern.iter().zip(point.y..) {
+        for (expected, x) in line.chars().zip(point.x..) {
+            let actual = get_fb_char(frame, Point::new(x, y));
             assert_eq!(actual, expected, "invalid color at x={x}, y={y}")
         }
     }
