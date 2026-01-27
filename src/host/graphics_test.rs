@@ -119,7 +119,7 @@ fn test_draw_vline() {
 /// Drawing a line out of screen bounds
 /// should simply cut the line at the boundary.
 #[test]
-fn test_draw_line_out_of_bounds() {
+fn test_draw_line_oob() {
     let mut store = make_store();
     let func = wasmi::Func::wrap(&mut store, draw_line);
 
@@ -253,7 +253,7 @@ fn test_draw_circle() {
 
 /// Draw circle paritally out-of-bounds on the left.
 #[test]
-fn test_draw_circle_part_oob_left() {
+fn test_draw_circle_oob_left() {
     let mut store = make_store();
     let func = wasmi::Func::wrap(&mut store, draw_circle);
 
@@ -277,7 +277,7 @@ fn test_draw_circle_part_oob_left() {
 
 /// Draw circle paritally out-of-bounds on the left.
 #[test]
-fn test_draw_circle_part_oob_top() {
+fn test_draw_circle_oob_top() {
     let mut store = make_store();
     let func = wasmi::Func::wrap(&mut store, draw_circle);
 
@@ -443,6 +443,184 @@ fn test_draw_image_oob_bottom() {
             "......", // y=157
             "..PRO.", // y=158
             ".YgGD.", // y=159
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 1, 2, 0, 0, 2, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            "..P...", // y=2
+            ".Yg...", // y=3
+            "......", // y=4
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image_x1() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 1, 2, 1, 0, 2, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            ".PR...", // y=2
+            ".gG...", // y=3
+            "......", // y=4
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image_x2() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 1, 2, 2, 0, 2, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            ".RO...", // y=2
+            ".GD...", // y=3
+            "......", // y=4
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image_y1() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 1, 2, 0, 1, 2, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            ".Yg...", // y=2
+            ".dB...", // y=3
+            "......", // y=4
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image_too_wide() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 1, 2, 2, 0, 10, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            ".RO...", // y=2
+            ".GD...", // y=3
+            "......", // y=4
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image_too_tall() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 1, 2, 0, 2, 2, 10]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            ".dB...", // y=2
+            ".W◔...", // y=3
+            "......", // y=4
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image_oob_left1() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, -1, 2, 0, 0, 3, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            "PR....", // y=2
+            "gG....", // y=3
+            "......", // y=4
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image_oob_left2() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, -2, 2, 0, 0, 3, 2]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "......", // y=0
+            "......", // y=1
+            "R.....", // y=2
+            "G.....", // y=3
+            "......", // y=4
+        ],
+    );
+}
+
+#[test]
+fn test_draw_sub_image_oob_top() {
+    let mut store = make_store();
+    let func = wasmi::Func::wrap(&mut store, draw_sub_image);
+    write_mem(&mut store, 5, IMG16);
+    let inputs = wrap_input(&[5, IMG16.len() as _, 2, -1, 0, 0, 2, 3]);
+    func.call(&mut store, &inputs, &mut []).unwrap();
+    let state = store.data_mut();
+    check_display(
+        &state.frame,
+        &[
+            "..Yg..", // y=0
+            "..dB..", // y=1
+            "......", // y=2
         ],
     );
 }
