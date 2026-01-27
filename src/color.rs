@@ -2,7 +2,7 @@ use embedded_graphics::pixelcolor::raw::RawU16;
 use embedded_graphics::pixelcolor::*;
 
 /// Color optimized for fast rendering on the device.
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy)]
 pub struct Rgb16(pub u8, pub u8);
 
 impl Rgb16 {
