@@ -139,7 +139,9 @@ impl ParsedImage<'_> {
             top -= point.y;
         }
 
-        let mut height = sub.size.height as i32;
+        let img_height = self.bytes.len() * ppb / self.width as usize;
+        let max_height = img_height as i32 - sub.top_left.y;
+        let mut height = i32::min(sub.size.height as i32, max_height);
         let oob_bottom = (point.y + height) - HEIGHT as i32;
         if oob_bottom > 0 {
             height -= oob_bottom;
@@ -157,7 +159,8 @@ impl ParsedImage<'_> {
             left -= point.x;
         }
 
-        let mut width = sub.size.width as i32;
+        let max_width = self.width as i32 - sub.top_left.x;
+        let mut width = i32::min(sub.size.width as i32, max_width);
         let oob_right = (point.y + width) - WIDTH as i32;
         if oob_right > 0 {
             width -= oob_right;
@@ -175,17 +178,19 @@ impl ParsedImage<'_> {
             2 => 0b11,
             _ => 0b1111,
         };
+        let swaps = parse_swaps(self.transp, self.swaps);
         for iy in top..bottom {
             for ix in left..right {
                 let offset = (iy * self.width as i32 + ix) as usize;
                 let bytes_offset = offset / ppb;
                 let byte = self.bytes[bytes_offset];
                 let pixel_offset = 4 - bpp * (offset % ppb);
-                let luma = (byte >> pixel_offset) & mask;
-                let color = Gray4::new(luma);
-                let fx = point.x + (ix - left);
-                let fy = point.y + (iy - top);
-                frame.set_pixel(Point::new(fx, fy), color);
+                let color_idx = (byte >> pixel_offset) & mask;
+                if let Some(color) = swaps[color_idx as usize] {
+                    let fx = point.x + (ix - left);
+                    let fy = point.y + (iy - top);
+                    frame.set_pixel(Point::new(fx, fy), color);
+                };
             }
         }
     }
