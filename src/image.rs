@@ -134,15 +134,26 @@ impl ParsedImage<'_> {
         let bpp = self.bpp as usize;
         let ppb = 8 / bpp;
 
+        let mut p = point;
         let mut top = sub.top_left.y;
-        if point.y < 0 {
-            top -= point.y;
+        let mut left = sub.top_left.x;
+        let mut width = sub.size.width as i32;
+        let mut height = sub.size.height as i32;
+
+        // Adjust top boundaries.
+        if p.y < 0 {
+            top -= p.y;
+            height += p.y;
+            p.y = 0;
         }
 
+        // Adjust bottom boundaries.
         let img_height = self.bytes.len() * ppb / self.width as usize;
-        let max_height = img_height as i32 - sub.top_left.y;
-        let mut height = i32::min(sub.size.height as i32, max_height);
-        let oob_bottom = (point.y + height) - HEIGHT as i32;
+        let max_height = img_height as i32 - top;
+        if height > max_height {
+            height = max_height;
+        }
+        let oob_bottom = (p.y + height) - HEIGHT as i32;
         if oob_bottom > 0 {
             height -= oob_bottom;
             if height <= 0 {
@@ -154,14 +165,19 @@ impl ParsedImage<'_> {
             return;
         }
 
-        let mut left = sub.top_left.x;
-        if point.x < 0 {
-            left -= point.x;
+        // Adjust left boundaries.
+        if p.x < 0 {
+            left -= p.x;
+            width += p.x;
+            p.x = 0;
         }
 
-        let max_width = self.width as i32 - sub.top_left.x;
-        let mut width = i32::min(sub.size.width as i32, max_width);
-        let oob_right = (point.y + width) - WIDTH as i32;
+        // Adjust right boundaries.
+        let max_width = self.width as i32 - left;
+        if width > max_width {
+            width = max_width;
+        }
+        let oob_right = (p.y + width) - WIDTH as i32;
         if oob_right > 0 {
             width -= oob_right;
             if width <= 0 {
@@ -187,8 +203,8 @@ impl ParsedImage<'_> {
                 let pixel_offset = 4 - bpp * (offset % ppb);
                 let color_idx = (byte >> pixel_offset) & mask;
                 if let Some(color) = swaps[color_idx as usize] {
-                    let fx = point.x + (ix - left);
-                    let fy = point.y + (iy - top);
+                    let fx = p.x + (ix - left);
+                    let fy = p.y + (iy - top);
                     frame.set_pixel(Point::new(fx, fy), color);
                 };
             }
