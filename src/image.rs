@@ -17,33 +17,25 @@ pub struct ParsedImage<'a> {
 
 impl ParsedImage<'_> {
     pub fn render(&self, point: Point, frame: &mut FrameBuffer) {
-        match self.bpp {
-            1 => {
-                if let Some(sub) = self.sub {
+        if let Some(sub) = self.sub {
+            match self.bpp {
+                1 => {
                     let image_raw = ImageRawLE::<BinaryColor>::new(self.bytes, self.width);
                     self.draw_bpp(image_raw, point, sub, frame)
-                } else {
-                    self.draw_fast::<1, 8, 0b1>(point, frame);
                 }
-            }
-            2 => {
-                if let Some(sub) = self.sub {
+                2 => {
                     let image_raw = ImageRawLE::<Gray2>::new(self.bytes, self.width);
                     self.draw_bpp(image_raw, point, sub, frame)
-                } else {
-                    self.draw_fast::<2, 4, 0b11>(point, frame);
                 }
-            }
-            4 => {
-                if let Some(sub) = self.sub {
+                4 => {
                     let image_raw = ImageRawLE::<Gray4>::new(self.bytes, self.width);
                     self.draw_bpp(image_raw, point, sub, frame)
-                } else {
-                    self.draw_fast::<4, 2, 0b1111>(point, frame);
                 }
-            }
-            _ => {}
-        };
+                _ => {}
+            };
+        } else {
+            self.draw_fast(point, frame);
+        }
     }
 
     /// Draw the raw image at the given point into the target.
@@ -66,18 +58,15 @@ impl ParsedImage<'_> {
     ///
     /// Avoids going through embedded-graphics machinery and instead
     /// iterates over image bytes directly.
-    fn draw_fast<const BPP: usize, const PPB: usize, const MASK: u8>(
-        &self,
-        point: Point,
-        frame: &mut FrameBuffer,
-    ) {
+    fn draw_fast(&self, point: Point, frame: &mut FrameBuffer) {
+        let ppb = (8 / self.bpp) as usize;
         let swaps = parse_swaps(self.transp, self.swaps);
         let mut p = point;
         let mut image = self.bytes;
 
         // Cut the top out-of-bounds part of the image.
         if p.y < 0 {
-            let start_i = (-p.y * self.width as i32) as usize / PPB;
+            let start_i = (-p.y * self.width as i32) as usize / ppb;
             let Some(sub_image) = image.get(start_i..) else {
                 return;
             };
@@ -86,11 +75,11 @@ impl ParsedImage<'_> {
         }
 
         // Cut the bottom out-of-bounds part of the image.
-        let height = (image.len() * PPB) as i32 / self.width as i32;
+        let height = (image.len() * ppb) as i32 / self.width as i32;
         let bottom_y = p.y + height;
         if bottom_y > HEIGHT as i32 {
             let new_height = height - (bottom_y - HEIGHT as i32);
-            let end_i = (new_height * self.width as i32) as usize / PPB;
+            let end_i = (new_height * self.width as i32) as usize / ppb;
             let Some(sub_image) = image.get(..end_i) else {
                 return;
             };
@@ -103,24 +92,30 @@ impl ParsedImage<'_> {
         let mut right_x = point.x + self.width as i32;
         if right_x > WIDTH as i32 {
             let skip_px = (right_x - WIDTH as i32) as usize;
-            skip = skip_px / PPB;
-            right_x = WIDTH as i32 + (skip_px % PPB) as i32;
+            skip = skip_px / ppb;
+            right_x = WIDTH as i32 + (skip_px % ppb) as i32;
         }
 
         // Skip the left out-of-bounds part of the image.
         let mut left_x = point.x;
         if left_x < 0 {
             let skip_px = -left_x as usize;
-            skip += skip_px / PPB;
-            left_x = -((skip_px % PPB) as i32);
+            skip += skip_px / ppb;
+            left_x = -((skip_px % ppb) as i32);
         }
 
         let mut i = 0;
+        let bpp = self.bpp as u32;
+        let mask = match self.bpp {
+            1 => 0b1,
+            2 => 0b11,
+            _ => 0b1111,
+        };
         while i < image.len() {
             let mut byte = image[i];
-            for _ in 0..PPB {
-                byte = byte.rotate_left(BPP as _);
-                let c1 = usize::from(byte & MASK);
+            for _ in 0..ppb {
+                byte = byte.rotate_left(bpp);
+                let c1 = usize::from(byte & mask);
                 if let Some(c1) = swaps[c1] {
                     frame.set_pixel(p, c1);
                 };
