@@ -17,17 +17,19 @@ type C<'a, 'b> = wasmi::Caller<'a, Box<State<'b>>>;
 /// `data/AUTHOR_ID/APP_ID/DIR_NAME/FILE_NAME`
 const MAX_DEPTH: usize = 5;
 
-pub(crate) fn list_dirs_buf_size(caller: C, path_ptr: u32, path_len: u32) -> u32 {
+pub(crate) fn list_dirs_buf_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "sudo.list_dirs_buf_size";
     list_entries_buf_size(caller, path_ptr, path_len, EntryKind::Dir)
 }
 
-pub(crate) fn list_files_buf_size(caller: C, path_ptr: u32, path_len: u32) -> u32 {
+pub(crate) fn list_files_buf_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "sudo.list_files_buf_size";
     list_entries_buf_size(caller, path_ptr, path_len, EntryKind::File)
 }
 
 pub fn list_entries_buf_size(mut caller: C, path_ptr: u32, path_len: u32, kind: EntryKind) -> u32 {
-    let state = caller.data_mut();
-    state.called = "sudo.list_dirs_buf_size";
     let state = caller.data_mut();
     let Some(memory) = state.memory else {
         state.log_error(HostError::MemoryNotFound);
@@ -73,22 +75,26 @@ pub fn list_entries_buf_size(mut caller: C, path_ptr: u32, path_len: u32, kind: 
 }
 
 pub(crate) fn list_dirs(
-    caller: C,
+    mut caller: C,
     path_ptr: u32,
     path_len: u32,
     buf_ptr: u32,
     buf_len: u32,
 ) -> u32 {
+    let state = caller.data_mut();
+    state.called = "sudo.list_dirs";
     list_entries(caller, path_ptr, path_len, buf_ptr, buf_len, EntryKind::Dir)
 }
 
 pub(crate) fn list_files(
-    caller: C,
+    mut caller: C,
     path_ptr: u32,
     path_len: u32,
     buf_ptr: u32,
     buf_len: u32,
 ) -> u32 {
+    let state = caller.data_mut();
+    state.called = "sudo.list_files";
     list_entries(
         caller,
         path_ptr,
@@ -108,7 +114,6 @@ fn list_entries(
     kind: EntryKind,
 ) -> u32 {
     let state = caller.data_mut();
-    state.called = "sudo.list_dirs";
     let Some(memory) = state.memory else {
         state.log_error(HostError::MemoryNotFound);
         return 0;
