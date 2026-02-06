@@ -1,49 +1,24 @@
 use crate::host::*;
 use crate::state::State;
-use alloc::borrow::{Cow, ToOwned as _};
 use alloc::boxed::Box;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use core::fmt;
 
 /// A linking error that may be returned by [`populate_externals`].
 pub enum LinkingError {
-    UsedDisabledSudoHostFunction {
-        name: Box<str>,
-    },
-    UnknownHostFunction {
-        module: Cow<'static, str>,
-        name: Box<str>,
-    },
-}
-
-impl LinkingError {
-    /// Returns a new [`LinkingError::UsedDisabledSudoHostFunction`].
-    #[cold]
-    pub fn used_disabled_sudo_host_function(name: impl Into<Box<str>>) -> Self {
-        Self::UsedDisabledSudoHostFunction { name: name.into() }
-    }
-
-    /// Returns a new [`LinkingError::UnknownHostFunction`].
-    #[cold]
-    pub fn unknown_host_function(
-        module: impl Into<Cow<'static, str>>,
-        name: impl Into<Box<str>>,
-    ) -> Self {
-        Self::UnknownHostFunction {
-            module: module.into(),
-            name: name.into(),
-        }
-    }
+    SudoDisabled,
+    UnknownHostFunction(String, String),
 }
 
 impl fmt::Display for LinkingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UsedDisabledSudoHostFunction { name } => {
-                write!(f, "used disabled sudo host function: {name}")
+            Self::SudoDisabled => {
+                write!(f, "sudo is disabled")
             }
-            Self::UnknownHostFunction { module, name } => {
-                write!(f, "unknown host function: {module}::{name}")
+            Self::UnknownHostFunction(module, name) => {
+                write!(f, "unknown host function: {module}.{name}")
             }
         }
     }
@@ -92,9 +67,7 @@ pub(crate) fn populate_externals<'a>(
             MODULE_MISC => select_misc_external(ctx, fn_name),
             MODULE_SUDO => {
                 if !sudo {
-                    return Err(LinkingError::used_disabled_sudo_host_function(
-                        import.name(),
-                    ));
+                    return Err(LinkingError::SudoDisabled);
                 }
                 select_sudo_external(ctx, fn_name)
             }
@@ -105,16 +78,16 @@ pub(crate) fn populate_externals<'a>(
             MODULE_STATS_ALIAS => select_stats_external_alias(ctx, fn_name),
             MODULE_MISC_ALIAS => select_misc_external_alias(ctx, fn_name),
             _ => {
-                return Err(LinkingError::unknown_host_function(
-                    import.module().to_owned(),
-                    fn_name,
+                return Err(LinkingError::UnknownHostFunction(
+                    module_name.to_string(),
+                    fn_name.to_string(),
                 ));
             }
         };
         let Some(func) = maybe_func else {
-            return Err(LinkingError::unknown_host_function(
-                module_name.to_owned(),
-                fn_name,
+            return Err(LinkingError::UnknownHostFunction(
+                module_name.to_string(),
+                fn_name.to_string(),
             ));
         };
         externs.push(wasmi::Extern::Func(func));

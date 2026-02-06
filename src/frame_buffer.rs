@@ -188,6 +188,7 @@ impl DrawTarget for FrameBuffer {
         for y in top_y..bottom_y {
             let start_i = y * WIDTH / 2 + start_x / 2;
             let end_i = start_i + width / 2;
+            // TODO: IT PANICS (end_i overflows)
             self.data[start_i..end_i].fill(new_byte);
         }
 
