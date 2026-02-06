@@ -81,7 +81,9 @@ pub(crate) fn populate_externals<'a>(
     externs: &mut Vec<wasmi::Extern>,
 ) -> Result<(), LinkingError> {
     let mut ctx = ctx;
-    for import in module.imports() {
+    let mut imports = module.imports();
+    externs.reserve(imports.len());
+    for import in imports {
         let ctx = ctx.as_context_mut();
         let func = match import.module() {
             MODULE_GRAPHICS => select_graphics_external(ctx, import),
