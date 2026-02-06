@@ -610,12 +610,14 @@ impl<'a> State<'a> {
         self.set_next(Some(id));
     }
 
-    pub fn disconnect(&self) {
+    pub fn disconnect(&mut self) {
         let net_handler = self.net_handler.replace(NetHandler::None);
         if let NetHandler::Connection(conn) = net_handler {
             let res = conn.disconnect();
             if let Err(err) = res {
-                self.device.log_error("netcode", err);
+                self.device.log_error("netcode", &err);
+                let msg = alloc::format!("{err}");
+                self.error = Some(ErrorScene::new(msg));
             }
         }
     }
