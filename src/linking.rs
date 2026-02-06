@@ -39,20 +39,14 @@ impl LinkingError {
 impl fmt::Display for LinkingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LinkingError::UsedDisabledSudoHostFunction { name } => {
+            Self::UsedDisabledSudoHostFunction { name } => {
                 write!(f, "used disabled sudo host function: {name}")
             }
-            LinkingError::UnknownHostFunction { module, name } => {
+            Self::UnknownHostFunction { module, name } => {
                 write!(f, "unknown host function: {module}::{name}")
             }
         }
     }
-}
-
-macro_rules! bail_unknown_host_function {
-    ($module:expr, $name:expr $(,)?) => {{
-        return Err(LinkingError::unknown_host_function($module, $name));
-    }};
 }
 
 const MODULE_GRAPHICS: &str = "graphics";
@@ -85,7 +79,8 @@ pub(crate) fn populate_externals<'a>(
     externs.reserve(imports.len());
     for import in imports {
         let ctx = ctx.as_context_mut();
-        let func = match import.module() {
+        let module_name = import.module();
+        let maybe_func = match module_name {
             MODULE_GRAPHICS => select_graphics_external(ctx, import),
             MODULE_AUDIO => select_audio_external(ctx, import),
             MODULE_INPUT => select_input_external(ctx, import),
@@ -94,17 +89,33 @@ pub(crate) fn populate_externals<'a>(
             MODULE_NET => select_net_external(ctx, import),
             MODULE_STATS => select_stats_external(ctx, import),
             MODULE_MISC => select_misc_external(ctx, import),
-            MODULE_SUDO => select_sudo_external(ctx, import, sudo),
+            MODULE_SUDO => {
+                if !sudo {
+                    return Err(LinkingError::used_disabled_sudo_host_function(
+                        import.name(),
+                    ));
+                }
+                select_sudo_external(ctx, import)
+            }
             MODULE_WASIP1 => select_wasip1_external(ctx, import),
             MODULE_GRAPHICS_ALIAS => select_graphics_external_alias(ctx, import),
             MODULE_INPUT_ALIAS => select_input_external_alias(ctx, import),
             MODULE_NET_ALIAS => select_net_external_alias(ctx, import),
             MODULE_STATS_ALIAS => select_stats_external_alias(ctx, import),
             MODULE_MISC_ALIAS => select_misc_external_alias(ctx, import),
-            module => {
-                bail_unknown_host_function!(module.to_owned(), import.name())
+            _ => {
+                return Err(LinkingError::unknown_host_function(
+                    import.module().to_owned(),
+                    import.name(),
+                ));
             }
-        }?;
+        };
+        let Some(func) = maybe_func else {
+            return Err(LinkingError::unknown_host_function(
+                module_name.to_owned(),
+                "",
+            ));
+        };
         externs.push(wasmi::Extern::Func(func));
     }
     Ok(())
@@ -113,7 +124,7 @@ pub(crate) fn populate_externals<'a>(
 fn select_graphics_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "clear_screen" => host_func(ctx, graphics::clear_screen),
         "set_color" => host_func(ctx, graphics::set_color),
@@ -132,15 +143,15 @@ fn select_graphics_external<'a>(
         "draw_sub_image" => host_func(ctx, graphics::draw_sub_image),
         "set_canvas" => host_func(ctx, graphics::set_canvas),
         "unset_canvas" => host_func(ctx, graphics::unset_canvas),
-        name => bail_unknown_host_function!(MODULE_GRAPHICS, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_audio_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "reset" => host_func(ctx, audio::reset),
         "reset_all" => host_func(ctx, audio::reset_all),
@@ -171,40 +182,40 @@ fn select_audio_external<'a>(
         "mod_linear" => host_func(ctx, audio::mod_linear),
         "mod_hold" => host_func(ctx, audio::mod_hold),
         "mod_sine" => host_func(ctx, audio::mod_sine),
-        name => bail_unknown_host_function!(MODULE_AUDIO, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_input_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "read_pad" => host_func(ctx, input::read_pad),
         "read_buttons" => host_func(ctx, input::read_buttons),
-        name => bail_unknown_host_function!(MODULE_INPUT, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_menu_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "add_menu_item" => host_func(ctx, menu::add_menu_item),
         "remove_menu_item" => host_func(ctx, menu::remove_menu_item),
         "open_menu" => host_func(ctx, menu::open_menu),
-        name => bail_unknown_host_function!(MODULE_MENU, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_fs_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "get_rom_file_size" => host_func(ctx, fs::get_rom_file_size),
         "load_rom_file" => host_func(ctx, fs::load_rom_file),
@@ -212,41 +223,41 @@ fn select_fs_external<'a>(
         "load_file" => host_func(ctx, fs::load_file),
         "dump_file" => host_func(ctx, fs::dump_file),
         "remove_file" => host_func(ctx, fs::remove_file),
-        name => bail_unknown_host_function!(MODULE_FS, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_net_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "get_me" => host_func(ctx, net::get_me),
         "get_peers" => host_func(ctx, net::get_peers),
         "save_stash" => host_func(ctx, net::save_stash),
         "load_stash" => host_func(ctx, net::load_stash),
-        name => bail_unknown_host_function!(MODULE_NET, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_stats_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "add_progress" => host_func(ctx, stats::add_progress),
         "add_score" => host_func(ctx, stats::add_score),
-        name => bail_unknown_host_function!(MODULE_STATS, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_misc_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "log_debug" => host_func(ctx, misc::log_debug),
         "log_error" => host_func(ctx, misc::log_error),
@@ -256,21 +267,15 @@ fn select_misc_external<'a>(
         "restart" => host_func(ctx, misc::restart),
         "set_conn_status" => host_func(ctx, misc::set_conn_status),
         "quit" => host_func(ctx, misc::quit),
-        name => bail_unknown_host_function!(MODULE_MISC, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_sudo_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-    sudo: bool,
-) -> Result<wasmi::Func, LinkingError> {
-    if !sudo {
-        return Err(LinkingError::used_disabled_sudo_host_function(
-            import.name(),
-        ));
-    }
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "list_dirs" => host_func(ctx, sudo::list_dirs),
         "list_dirs_buf_size" => host_func(ctx, sudo::list_dirs_buf_size),
@@ -279,15 +284,15 @@ fn select_sudo_external<'a>(
         "get_file_size" => host_func(ctx, sudo::get_file_size),
         "load_file" => host_func(ctx, sudo::load_file),
         "run_app" => host_func(ctx, sudo::run_app),
-        name => bail_unknown_host_function!(MODULE_SUDO, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_wasip1_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "environ_get" => host_func(ctx, wasip1::environ_get),
         "environ_sizes_get" => host_func(ctx, wasip1::environ_sizes_get),
@@ -297,15 +302,15 @@ fn select_wasip1_external<'a>(
         "fd_seek" => host_func(ctx, wasip1::fd_seek),
         "fd_write" => host_func(ctx, wasip1::fd_write),
         "proc_exit" => host_func(ctx, wasip1::proc_exit),
-        name => bail_unknown_host_function!(MODULE_WASIP1, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_graphics_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "a" => host_func(ctx, graphics::draw_arc),
         "c" => host_func(ctx, graphics::draw_circle),
@@ -324,53 +329,53 @@ fn select_graphics_external_alias<'a>(
         "t" => host_func(ctx, graphics::draw_triangle),
         "x" => host_func(ctx, graphics::draw_text),
         "q" => host_func(ctx, graphics::draw_qr),
-        name => bail_unknown_host_function!(MODULE_GRAPHICS_ALIAS, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_input_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "p" => host_func(ctx, input::read_pad),
         "b" => host_func(ctx, input::read_buttons),
-        name => bail_unknown_host_function!(MODULE_INPUT_ALIAS, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_net_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "l" => host_func(ctx, net::load_stash),
         "m" => host_func(ctx, net::get_me),
         "p" => host_func(ctx, net::get_peers),
         "s" => host_func(ctx, net::save_stash),
-        name => bail_unknown_host_function!(MODULE_NET_ALIAS, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_stats_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "p" => host_func(ctx, stats::add_progress),
         "s" => host_func(ctx, stats::add_score),
-        name => bail_unknown_host_function!(MODULE_STATS_ALIAS, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 fn select_misc_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
     import: wasmi::ImportType<'_>,
-) -> Result<wasmi::Func, LinkingError> {
+) -> Option<wasmi::Func> {
     let func = match import.name() {
         "d" => host_func(ctx, misc::log_debug),
         "e" => host_func(ctx, misc::log_error),
@@ -378,9 +383,9 @@ fn select_misc_external_alias<'a>(
         "q" => host_func(ctx, misc::quit),
         "r" => host_func(ctx, misc::get_random),
         "s" => host_func(ctx, misc::set_seed),
-        name => bail_unknown_host_function!(MODULE_MISC_ALIAS, name),
+        _ => return None,
     };
-    Ok(func)
+    Some(func)
 }
 
 /// Utility function to wrap host functions without Wasmi imports.
