@@ -218,19 +218,8 @@ impl<'a> State<'a> {
     }
 
     pub(crate) fn get_settings(&mut self) -> &mut firefly_types::Settings {
-        use crate::alloc::string::ToString;
         if self.settings.is_none() {
-            let settings = self.load_settings();
-            self.settings = match settings {
-                Some(settings) => Some(settings),
-                None => Some(firefly_types::Settings {
-                    xp: 0,
-                    badges: 0,
-                    lang: [b'e', b'n'],
-                    name: "anonymous".to_string(),
-                    timezone: "Europe/Amsterdam".to_string(),
-                }),
-            }
+            self.settings = Some(self.load_settings().unwrap_or_default());
         }
         self.settings.as_mut().unwrap()
     }
