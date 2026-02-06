@@ -75,45 +75,46 @@ pub(crate) fn populate_externals<'a>(
     externs: &mut Vec<wasmi::Extern>,
 ) -> Result<(), LinkingError> {
     let mut ctx = ctx;
-    let mut imports = module.imports();
+    let imports = module.imports();
     externs.reserve(imports.len());
     for import in imports {
         let ctx = ctx.as_context_mut();
         let module_name = import.module();
+        let fn_name = import.name();
         let maybe_func = match module_name {
-            MODULE_GRAPHICS => select_graphics_external(ctx, import),
-            MODULE_AUDIO => select_audio_external(ctx, import),
-            MODULE_INPUT => select_input_external(ctx, import),
-            MODULE_MENU => select_menu_external(ctx, import),
-            MODULE_FS => select_fs_external(ctx, import),
-            MODULE_NET => select_net_external(ctx, import),
-            MODULE_STATS => select_stats_external(ctx, import),
-            MODULE_MISC => select_misc_external(ctx, import),
+            MODULE_GRAPHICS => select_graphics_external(ctx, fn_name),
+            MODULE_AUDIO => select_audio_external(ctx, fn_name),
+            MODULE_INPUT => select_input_external(ctx, fn_name),
+            MODULE_MENU => select_menu_external(ctx, fn_name),
+            MODULE_FS => select_fs_external(ctx, fn_name),
+            MODULE_NET => select_net_external(ctx, fn_name),
+            MODULE_STATS => select_stats_external(ctx, fn_name),
+            MODULE_MISC => select_misc_external(ctx, fn_name),
             MODULE_SUDO => {
                 if !sudo {
                     return Err(LinkingError::used_disabled_sudo_host_function(
                         import.name(),
                     ));
                 }
-                select_sudo_external(ctx, import)
+                select_sudo_external(ctx, fn_name)
             }
-            MODULE_WASIP1 => select_wasip1_external(ctx, import),
-            MODULE_GRAPHICS_ALIAS => select_graphics_external_alias(ctx, import),
-            MODULE_INPUT_ALIAS => select_input_external_alias(ctx, import),
-            MODULE_NET_ALIAS => select_net_external_alias(ctx, import),
-            MODULE_STATS_ALIAS => select_stats_external_alias(ctx, import),
-            MODULE_MISC_ALIAS => select_misc_external_alias(ctx, import),
+            MODULE_WASIP1 => select_wasip1_external(ctx, fn_name),
+            MODULE_GRAPHICS_ALIAS => select_graphics_external_alias(ctx, fn_name),
+            MODULE_INPUT_ALIAS => select_input_external_alias(ctx, fn_name),
+            MODULE_NET_ALIAS => select_net_external_alias(ctx, fn_name),
+            MODULE_STATS_ALIAS => select_stats_external_alias(ctx, fn_name),
+            MODULE_MISC_ALIAS => select_misc_external_alias(ctx, fn_name),
             _ => {
                 return Err(LinkingError::unknown_host_function(
                     import.module().to_owned(),
-                    import.name(),
+                    fn_name,
                 ));
             }
         };
         let Some(func) = maybe_func else {
             return Err(LinkingError::unknown_host_function(
                 module_name.to_owned(),
-                "",
+                fn_name,
             ));
         };
         externs.push(wasmi::Extern::Func(func));
@@ -123,9 +124,9 @@ pub(crate) fn populate_externals<'a>(
 
 fn select_graphics_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "clear_screen" => host_func(ctx, graphics::clear_screen),
         "set_color" => host_func(ctx, graphics::set_color),
         "draw_point" => host_func(ctx, graphics::draw_point),
@@ -150,9 +151,9 @@ fn select_graphics_external<'a>(
 
 fn select_audio_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "reset" => host_func(ctx, audio::reset),
         "reset_all" => host_func(ctx, audio::reset_all),
         "clear" => host_func(ctx, audio::clear),
@@ -189,9 +190,9 @@ fn select_audio_external<'a>(
 
 fn select_input_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "read_pad" => host_func(ctx, input::read_pad),
         "read_buttons" => host_func(ctx, input::read_buttons),
         _ => return None,
@@ -201,9 +202,9 @@ fn select_input_external<'a>(
 
 fn select_menu_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "add_menu_item" => host_func(ctx, menu::add_menu_item),
         "remove_menu_item" => host_func(ctx, menu::remove_menu_item),
         "open_menu" => host_func(ctx, menu::open_menu),
@@ -214,9 +215,9 @@ fn select_menu_external<'a>(
 
 fn select_fs_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "get_rom_file_size" => host_func(ctx, fs::get_rom_file_size),
         "load_rom_file" => host_func(ctx, fs::load_rom_file),
         "get_file_size" => host_func(ctx, fs::get_file_size),
@@ -230,9 +231,9 @@ fn select_fs_external<'a>(
 
 fn select_net_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "get_me" => host_func(ctx, net::get_me),
         "get_peers" => host_func(ctx, net::get_peers),
         "save_stash" => host_func(ctx, net::save_stash),
@@ -244,9 +245,9 @@ fn select_net_external<'a>(
 
 fn select_stats_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "add_progress" => host_func(ctx, stats::add_progress),
         "add_score" => host_func(ctx, stats::add_score),
         _ => return None,
@@ -256,9 +257,9 @@ fn select_stats_external<'a>(
 
 fn select_misc_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "log_debug" => host_func(ctx, misc::log_debug),
         "log_error" => host_func(ctx, misc::log_error),
         "set_seed" => host_func(ctx, misc::set_seed),
@@ -274,9 +275,9 @@ fn select_misc_external<'a>(
 
 fn select_sudo_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "list_dirs" => host_func(ctx, sudo::list_dirs),
         "list_dirs_buf_size" => host_func(ctx, sudo::list_dirs_buf_size),
         "list_files" => host_func(ctx, sudo::list_files),
@@ -291,9 +292,9 @@ fn select_sudo_external<'a>(
 
 fn select_wasip1_external<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "environ_get" => host_func(ctx, wasip1::environ_get),
         "environ_sizes_get" => host_func(ctx, wasip1::environ_sizes_get),
         "clock_time_get" => host_func(ctx, wasip1::clock_time_get),
@@ -309,9 +310,9 @@ fn select_wasip1_external<'a>(
 
 fn select_graphics_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "a" => host_func(ctx, graphics::draw_arc),
         "c" => host_func(ctx, graphics::draw_circle),
         "ca" => host_func(ctx, graphics::set_canvas),
@@ -336,9 +337,9 @@ fn select_graphics_external_alias<'a>(
 
 fn select_input_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "p" => host_func(ctx, input::read_pad),
         "b" => host_func(ctx, input::read_buttons),
         _ => return None,
@@ -348,9 +349,9 @@ fn select_input_external_alias<'a>(
 
 fn select_net_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "l" => host_func(ctx, net::load_stash),
         "m" => host_func(ctx, net::get_me),
         "p" => host_func(ctx, net::get_peers),
@@ -362,9 +363,9 @@ fn select_net_external_alias<'a>(
 
 fn select_stats_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "p" => host_func(ctx, stats::add_progress),
         "s" => host_func(ctx, stats::add_score),
         _ => return None,
@@ -374,9 +375,9 @@ fn select_stats_external_alias<'a>(
 
 fn select_misc_external_alias<'a>(
     ctx: impl wasmi::AsContextMut<Data = Box<State<'a>>>,
-    import: wasmi::ImportType<'_>,
+    fn_name: &str,
 ) -> Option<wasmi::Func> {
-    let func = match import.name() {
+    let func = match fn_name {
         "d" => host_func(ctx, misc::log_debug),
         "e" => host_func(ctx, misc::log_error),
         "n" => host_func(ctx, misc::get_name),
