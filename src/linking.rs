@@ -237,6 +237,7 @@ fn select_sudo_external<'a>(
         "list_files_buf_size" => Func::wrap(ctx, sudo::list_files_buf_size),
         "get_file_size" => Func::wrap(ctx, sudo::get_file_size),
         "load_file" => Func::wrap(ctx, sudo::load_file),
+        "dump_file" => Func::wrap(ctx, sudo::dump_file),
         "run_app" => Func::wrap(ctx, sudo::run_app),
         _ => return None,
     };
