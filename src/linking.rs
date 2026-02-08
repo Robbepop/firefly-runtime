@@ -238,6 +238,7 @@ fn select_sudo_external<'a>(
         "get_file_size" => Func::wrap(ctx, sudo::get_file_size),
         "load_file" => Func::wrap(ctx, sudo::load_file),
         "dump_file" => Func::wrap(ctx, sudo::dump_file),
+        "remove_file" => Func::wrap(ctx, sudo::remove_file),
         "run_app" => Func::wrap(ctx, sudo::run_app),
         _ => return None,
     };

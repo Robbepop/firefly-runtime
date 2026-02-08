@@ -394,6 +394,50 @@ pub(crate) fn dump_file(
     file_size as u32
 }
 
+pub(crate) fn remove_file(mut caller: C, path_ptr: u32, path_len: u32) {
+    let state = caller.data_mut();
+    state.called = "sudo.remove_file";
+    let Some(memory) = state.memory else {
+        state.log_error(HostError::MemoryNotFound);
+        return;
+    };
+    let (data, state) = memory.data_and_store_mut(&mut caller);
+    let path_ptr = path_ptr as usize;
+    let path_len = path_len as usize;
+    let Some(path_bytes) = data.get(path_ptr..path_ptr + path_len) else {
+        state.log_error(HostError::OomPointer);
+        return;
+    };
+
+    // parse and validate the dir path.
+    let Ok(path) = core::str::from_utf8(path_bytes) else {
+        state.log_error(HostError::FileNameUtf8);
+        return;
+    };
+    let parts: Vec<&str, MAX_DEPTH> = path.split('/').collect();
+    for part in &parts {
+        if let Err(err) = validate_path_part(part) {
+            state.log_error(HostError::FileName(err));
+            return;
+        }
+    }
+
+    let Some((file_name, dir_path)) = parts.split_last() else {
+        state.log_error(HostError::FileNotFound);
+        return;
+    };
+    let mut dir = match state.device.open_dir(dir_path) {
+        Ok(dir) => dir,
+        Err(err) => {
+            state.log_error(err);
+            return;
+        }
+    };
+    if let Err(err) = dir.remove_file(file_name) {
+        state.log_error(err);
+    };
+}
+
 fn get_id<'a>(ptr: u32, len: u32, data: &'a [u8], state: &mut State) -> Option<&'a str> {
     let app_ptr = ptr as usize;
     let app_len = len as usize;
