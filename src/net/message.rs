@@ -81,10 +81,31 @@ pub(crate) enum Resp {
     Ready(u8),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct Intro {
+    /// The device name as stored in settings.
     pub name: heapless::String<16>,
+
+    /// The runtime version.
     pub version: u16,
+
+    /// The lowercase ASCII preferred device language.
+    pub lang: [u8; 2],
+
+    /// The uppercase ASCII country code.
+    pub country: [u8; 2],
+
+    /// The preferred color scheme.
+    pub theme: u32,
+
+    /// Packed bitflags for the following boolean settings:
+    ///
+    /// * 0: `rotate_screen`
+    /// * 1: `reduce_flashing`
+    /// * 2: `gamepad_mode`
+    /// * 3: `contrast`
+    /// * 4: `easter_eggs`
+    pub flags: u8,
 }
 
 // TODO: drop Copy.

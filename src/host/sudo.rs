@@ -206,6 +206,9 @@ pub(crate) fn run_app(mut caller: C, author_ptr: u32, author_len: u32, app_ptr: 
     state.set_next(Some(id));
 }
 
+/// Get the size in bytes of the given file.
+///
+/// If the file does not exist, the result is a goose egg (0).
 pub fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
     let state = caller.data_mut();
     state.called = "sudo.get_file_size";
@@ -220,7 +223,7 @@ pub fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
         state.log_error(HostError::OomPointer);
         return 0;
     };
-    // parse and validate the dir path.
+    // Parse and validate the dir path.
     let Ok(path) = core::str::from_utf8(path_bytes) else {
         state.log_error(HostError::FileNameUtf8);
         return 0;

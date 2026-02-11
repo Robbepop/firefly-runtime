@@ -551,7 +551,20 @@ impl<'a> State<'a> {
         let name = &self.settings.name;
         let name = heapless::String::from_str(name).unwrap_or_default();
         // TODO: validate the name
-        let me = MyInfo { name, version: 1 };
+        let s = &self.settings;
+        let flags = u8::from(s.rotate_screen)
+            | u8::from(s.reduce_flashing) << 1
+            | u8::from(s.gamepad_mode) << 2
+            | u8::from(s.contrast) << 3
+            | u8::from(s.easter_eggs) << 4;
+        let me = Intro {
+            name,
+            version: 1,
+            lang: s.lang,
+            country: s.country,
+            theme: s.theme,
+            flags,
+        };
         let net = self.device.network();
         self.net_handler
             .set(NetHandler::Connector(Box::new(Connector::new(me, net))));

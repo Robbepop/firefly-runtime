@@ -16,15 +16,9 @@ pub(crate) enum ConnectStatus {
     Finished,
 }
 
-pub(crate) struct MyInfo {
-    pub name: heapless::String<16>,
-    pub version: u16,
-}
-
 pub(crate) struct PeerInfo {
     pub addr: Addr,
-    pub name: heapless::String<16>,
-    pub version: u16,
+    pub intro: Intro,
 }
 
 /// Connector establishes network connection between devices.
@@ -33,7 +27,7 @@ pub(crate) struct PeerInfo {
 /// at the beginning of the evening and it stays on as long as
 /// all the devices are turned on.
 pub(crate) struct Connector<'a> {
-    pub me: MyInfo,
+    pub me: Intro,
     net: NetworkImpl<'a>,
     last_advertisement: Option<Instant>,
     peer_addrs: heapless::Vec<Addr, MAX_PEERS>,
@@ -46,7 +40,7 @@ pub(crate) struct Connector<'a> {
 }
 
 impl<'a> Connector<'a> {
-    pub fn new(me: MyInfo, net: NetworkImpl<'a>) -> Self {
+    pub fn new(me: Intro, net: NetworkImpl<'a>) -> Self {
         Self {
             me,
             net,
@@ -83,7 +77,7 @@ impl<'a> Connector<'a> {
 
     pub fn validate(&self) -> Result<(), &'static str> {
         for peer in &self.peer_infos {
-            if peer.version != self.me.version {
+            if peer.intro.version != self.me.version {
                 return Err("devices have incompatible OS versions; please, update.");
             }
         }
@@ -95,7 +89,7 @@ impl<'a> Connector<'a> {
         for peer in self.peer_infos {
             let peer = Peer {
                 addr: Some(peer.addr),
-                name: peer.name,
+                name: peer.intro.name,
                 intro: None,
             };
             peers.push(peer).ok().unwrap();
@@ -202,15 +196,11 @@ impl<'a> Connector<'a> {
                 return Ok(());
             }
         }
-        let mut name = intro.name;
-        if firefly_types::validate_id(&name).is_err() {
-            name = "anonymous".try_into().unwrap();
+        let mut intro = intro;
+        if firefly_types::validate_id(&intro.name).is_err() {
+            intro.name = "anonymous".try_into().unwrap();
         }
-        let info = PeerInfo {
-            addr,
-            name,
-            version: intro.version,
-        };
+        let info = PeerInfo { addr, intro };
         let res = self.peer_infos.push(info);
         if res.is_err() {
             return Err(NetcodeError::PeerListFull);
@@ -226,9 +216,9 @@ impl<'a> Connector<'a> {
             .iter()
             .enumerate()
             .find(|(_, info)| info.addr == addr);
-        if let Some((index, info)) = maybe_index {
-            name = info.name.clone();
-            self.peer_infos.remove(index);
+        if let Some((peer_index, peer_info)) = maybe_index {
+            name = peer_info.intro.name.clone();
+            self.peer_infos.remove(peer_index);
         }
 
         let maybe_index = self
@@ -247,14 +237,7 @@ impl<'a> Connector<'a> {
     }
 
     fn send_intro(&mut self, _device: &DeviceImpl, addr: Addr) -> Result<(), NetcodeError> {
-        let mut name = self.me.name.clone();
-        if firefly_types::validate_id(&name).is_err() {
-            name = "anonymous".try_into().unwrap();
-        }
-        let intro = Intro {
-            name,
-            version: self.me.version,
-        };
+        let intro = self.me.clone();
         let msg = Message::Resp(Resp::Intro(intro));
         let mut buf = alloc::vec![0u8; MSG_SIZE];
         let raw = msg.encode(&mut buf)?;

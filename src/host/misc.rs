@@ -105,6 +105,7 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
     let name: &str = match handler {
         NetHandler::FrameSyncer(syncer) => {
             let Some(peer) = syncer.peers.get(index as usize) else {
+                state.log_error("invalid peer ID");
                 return 0;
             };
             &peer.name
@@ -116,7 +117,7 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
             } else {
                 let index = index as usize - 1;
                 match connector.peer_infos().get(index) {
-                    Some(peer) => &peer.name,
+                    Some(peer) => &peer.intro.name,
                     None => {
                         let peers = connector.peer_addrs().len();
                         if index > peers {
