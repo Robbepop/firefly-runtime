@@ -89,14 +89,14 @@ impl<'a> Connector<'a> {
         for peer in self.peer_infos {
             let peer = Peer {
                 addr: Some(peer.addr),
-                name: peer.intro.name,
+                intro: peer.intro,
                 app: None,
             };
             peers.push(peer).ok().unwrap();
         }
         let me = Peer {
             addr: None,
-            name: self.me.name,
+            intro: self.me,
             app: None,
         };
         peers.push(me).ok().unwrap();

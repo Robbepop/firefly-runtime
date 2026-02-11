@@ -16,8 +16,7 @@ const MSG_SIZE: usize = 64;
 pub(crate) struct Peer {
     /// If address is None, the peer is the current device.
     pub addr: Option<Addr>,
-    /// The human-readable name of the device.
-    pub name: heapless::String<16>,
+    pub intro: Intro,
     /// Not None when the peer is ready to start the selected app.
     pub app: Option<AppIntro>,
 }
@@ -152,26 +151,26 @@ impl<'a> Connection<'a> {
         let mut peers = heapless::Vec::<FSPeer, 8>::new();
         let mut seed = 0;
         for peer in self.peers {
-            let intro = peer.app.unwrap();
+            let app = peer.app.unwrap();
             let friend_id = if peer.addr.is_none() {
                 None
             } else {
                 // TODO: don't open the file again for each peer. Detect all IDs in one go.
-                get_friend_id(device, peer.name.as_str())
+                get_friend_id(device, &peer.intro.name)
             };
             let peer = FSPeer {
                 addr: peer.addr,
-                name: peer.name,
+                intro: peer.intro,
                 states: RingBuf::new(),
                 friend_id,
                 // TODO: don't keep these in memory for the current device.
                 // They are already stored in State.
-                badges: intro.badges,
-                scores: intro.scores,
-                stash: intro.stash,
+                badges: app.badges,
+                scores: app.scores,
+                stash: app.stash,
             };
             peers.push(peer).ok().unwrap();
-            seed ^= intro.seed;
+            seed ^= app.seed;
         }
         Box::new(FrameSyncer {
             peers,
@@ -315,7 +314,7 @@ impl<'a> Connection<'a> {
             .find(|(_, peer)| peer.addr == Some(addr));
         if let Some((index, _)) = maybe_index {
             let peer = self.peers.remove(index);
-            name = peer.name;
+            name = peer.intro.name;
         }
 
         Err(NetcodeError::Disconnected(name))

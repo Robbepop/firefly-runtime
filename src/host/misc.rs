@@ -108,7 +108,7 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
                 state.log_error("invalid peer ID");
                 return 0;
             };
-            &peer.name
+            &peer.intro.name
         }
         NetHandler::None => &state.settings.name,
         NetHandler::Connector(connector) => {
@@ -132,7 +132,7 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
             let Some(peer) = connection.peers.get(index as usize) else {
                 return 0;
             };
-            &peer.name
+            &peer.intro.name
         }
     };
 

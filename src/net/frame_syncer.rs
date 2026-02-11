@@ -13,8 +13,7 @@ const MSG_SIZE: usize = 64;
 pub(crate) struct FSPeer {
     /// If address is None, the peer is the current device.
     pub addr: Option<Addr>,
-    /// The human-readable name of the device.
-    pub name: heapless::String<16>,
+    pub intro: Intro,
     /// The peer's index in /sys/friends.
     pub friend_id: Option<u16>,
     pub states: RingBuf<FrameState>,
@@ -60,7 +59,7 @@ impl<'a> FrameSyncer<'a> {
         for peer in self.peers {
             let peer = Peer {
                 addr: peer.addr,
-                name: peer.name,
+                intro: peer.intro,
                 app: None,
             };
             peers.push(peer).ok().unwrap();
