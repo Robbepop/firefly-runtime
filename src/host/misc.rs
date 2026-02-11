@@ -149,6 +149,42 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
     name.len() as u32
 }
 
+pub(crate) fn get_lang(mut caller: C, index: u32) -> u32 {
+    let state = caller.data_mut();
+    state.called = "misc.get_lang";
+
+    let handler = state.net_handler.get_mut();
+    let lang: [u8; 2] = match handler {
+        NetHandler::FrameSyncer(syncer) => {
+            let Some(peer) = syncer.peers.get(index as usize) else {
+                state.log_error("invalid peer ID");
+                return 0;
+            };
+            peer.intro.lang
+        }
+        NetHandler::None => state.settings.lang,
+        NetHandler::Connector(connector) => {
+            if index == 0 {
+                connector.me.lang
+            } else {
+                let index = index as usize - 1;
+                match connector.peer_infos().get(index) {
+                    Some(peer) => peer.intro.lang,
+                    None => return 0,
+                }
+            }
+        }
+        NetHandler::Connection(connection) => {
+            let Some(peer) = connection.peers.get(index as usize) else {
+                return 0;
+            };
+            peer.intro.lang
+        }
+    };
+
+    u32::from(lang[0]) << 8 | u32::from(lang[1])
+}
+
 /// Stop the currently running app and run the default launcher instead.
 pub(crate) fn quit(mut caller: C) {
     let state = caller.data_mut();

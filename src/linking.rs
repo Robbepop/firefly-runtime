@@ -218,6 +218,7 @@ fn select_misc_external<'a>(
         "set_seed" => Func::wrap(ctx, misc::set_seed),
         "get_random" => Func::wrap(ctx, misc::get_random),
         "get_name" => Func::wrap(ctx, misc::get_name),
+        "get_lang" => Func::wrap(ctx, misc::get_lang),
         "restart" => Func::wrap(ctx, misc::restart),
         "set_conn_status" => Func::wrap(ctx, misc::set_conn_status),
         "quit" => Func::wrap(ctx, misc::quit),
