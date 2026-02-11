@@ -245,17 +245,7 @@ pub fn get_file_size(mut caller: C, path_ptr: u32, path_len: u32) -> u32 {
         }
     };
 
-    match dir.get_file_size(file_name) {
-        Ok(file_size) => file_size,
-        Err(err) => {
-            // Don't log "file not found" error when the launcher requests
-            // a splash screen but the app doesn't have one.
-            if *file_name != "_splash" {
-                state.log_error(HostError::FileRead(err));
-            }
-            0
-        }
-    }
+    dir.get_file_size(file_name).unwrap_or_default()
 }
 
 pub(crate) fn load_file(
