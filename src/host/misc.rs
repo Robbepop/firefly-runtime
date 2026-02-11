@@ -1,5 +1,5 @@
 use crate::error::HostError;
-use crate::net::ConnectStatus;
+use crate::net::{ConnectStatus, Intro};
 use crate::state::{NetHandler, State};
 use alloc::boxed::Box;
 use firefly_hal::Device;
@@ -149,107 +149,39 @@ pub(crate) fn get_name(mut caller: C, index: u32, ptr: u32) -> u32 {
     name.len() as u32
 }
 
-pub(crate) fn get_lang(mut caller: C, index: u32) -> u32 {
-    let state = caller.data_mut();
-    state.called = "misc.get_lang";
-
-    let handler = state.net_handler.get_mut();
-    let lang: [u8; 2] = match handler {
-        NetHandler::FrameSyncer(syncer) => {
-            let Some(peer) = syncer.peers.get(index as usize) else {
-                state.log_error("invalid peer ID");
-                return 0;
-            };
-            peer.intro.lang
-        }
-        NetHandler::None => state.settings.lang,
-        NetHandler::Connector(connector) => {
-            if index == 0 {
-                connector.me.lang
-            } else {
-                let index = index as usize - 1;
-                match connector.peer_infos().get(index) {
-                    Some(peer) => peer.intro.lang,
-                    None => return 0,
-                }
-            }
-        }
-        NetHandler::Connection(connection) => {
-            let Some(peer) = connection.peers.get(index as usize) else {
-                return 0;
-            };
-            peer.intro.lang
-        }
-    };
-
-    u32::from(lang[0]) << 8 | u32::from(lang[1])
-}
-
-pub(crate) fn get_theme(mut caller: C, index: u32) -> u32 {
-    let state = caller.data_mut();
-    state.called = "misc.get_theme";
-
-    let handler = state.net_handler.get_mut();
-    let theme: u32 = match handler {
-        NetHandler::FrameSyncer(syncer) => {
-            let Some(peer) = syncer.peers.get(index as usize) else {
-                state.log_error("invalid peer ID");
-                return 0;
-            };
-            peer.intro.theme
-        }
-        NetHandler::None => state.settings.theme,
-        NetHandler::Connector(connector) => {
-            if index == 0 {
-                connector.me.theme
-            } else {
-                let index = index as usize - 1;
-                match connector.peer_infos().get(index) {
-                    Some(peer) => peer.intro.theme,
-                    None => return 0,
-                }
-            }
-        }
-        NetHandler::Connection(connection) => {
-            let Some(peer) = connection.peers.get(index as usize) else {
-                return 0;
-            };
-            peer.intro.theme
-        }
-    };
-
-    theme
-}
-
-pub(crate) fn get_settings(mut caller: C, index: u32) -> u32 {
+/// Get packed (some) system settings of the peer.
+///
+/// Contains interface language, color theme, and some boolean flags.
+pub(crate) fn get_settings(mut caller: C, index: u32) -> u64 {
     let state = caller.data_mut();
     state.called = "misc.get_settings";
 
     let handler = state.net_handler.get_mut();
-    let flags: u8 = match handler {
+    match handler {
         NetHandler::FrameSyncer(syncer) => {
             let Some(peer) = syncer.peers.get(index as usize) else {
                 state.log_error("invalid peer ID");
                 return 0;
             };
-            peer.intro.flags
+            pack_intro(&peer.intro)
         }
         NetHandler::None => {
             let s = &state.settings;
-            u8::from(s.rotate_screen)
+            let flags = u8::from(s.rotate_screen)
                 | u8::from(s.reduce_flashing) << 1
                 | u8::from(s.gamepad_mode) << 2
                 | u8::from(s.contrast) << 3
-                | u8::from(s.easter_eggs) << 4
+                | u8::from(s.easter_eggs) << 4;
+            pack_settings(s.theme, flags, s.lang)
         }
         NetHandler::Connector(connector) => {
             if index == 0 {
-                connector.me.flags
+                pack_intro(&connector.me)
             } else {
                 let index = index as usize - 1;
                 match connector.peer_infos().get(index) {
-                    Some(peer) => peer.intro.flags,
-                    None => return 0,
+                    Some(peer) => pack_intro(&peer.intro),
+                    None => 0,
                 }
             }
         }
@@ -257,11 +189,21 @@ pub(crate) fn get_settings(mut caller: C, index: u32) -> u32 {
             let Some(peer) = connection.peers.get(index as usize) else {
                 return 0;
             };
-            peer.intro.flags
+            pack_intro(&peer.intro)
         }
-    };
+    }
+}
 
-    u32::from(flags)
+#[inline]
+fn pack_intro(intro: &Intro) -> u64 {
+    pack_settings(intro.theme, intro.flags, intro.lang)
+}
+
+fn pack_settings(theme: u32, flags: u8, lang: [u8; 2]) -> u64 {
+    let lang = u64::from(lang[0]) << 8 | u64::from(lang[1]);
+    let flags = u64::from(flags);
+    let theme = u64::from(theme);
+    theme << 32 | flags << 16 | lang
 }
 
 /// Stop the currently running app and run the default launcher instead.
