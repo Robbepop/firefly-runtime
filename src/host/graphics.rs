@@ -451,8 +451,9 @@ pub(crate) fn draw_text(
 
 /// Set an image localted in the guest memory as the draw target for all graphic operations.
 pub(crate) fn set_canvas(mut caller: C, ptr: u32, len: u32) {
-    const HEADER: usize = 5 + 8;
     let state = caller.data_mut();
+    state.called = "graphics.set_canvas";
+
     let Some(memory) = state.memory else {
         state.log_error(HostError::MemoryNotFound);
         return;
@@ -465,6 +466,19 @@ pub(crate) fn set_canvas(mut caller: C, ptr: u32, len: u32) {
         state.log_error(HostError::OomPointer);
         return;
     };
+    if image_bytes.len() < 3 {
+        state.log_error("canvas is too small");
+        return;
+    }
+    match image_bytes[0] {
+        0x21 => set_canvas_v1(state, ptr, len, image_bytes),
+        0x22 => set_canvas_v2(state, ptr, len, image_bytes),
+        _ => state.log_error("invalid magic number"),
+    }
+}
+
+fn set_canvas_v1(state: &mut Box<State<'_>>, ptr: u32, len: u32, image_bytes: &[u8]) {
+    const HEADER: usize = 5 + 8;
     if image_bytes.len() <= HEADER {
         state.log_error("canvas is too small");
         return;
@@ -476,11 +490,22 @@ pub(crate) fn set_canvas(mut caller: C, ptr: u32, len: u32) {
     }
     let width = u16::from_le_bytes([image_bytes[2], image_bytes[3]]) as u32;
     let image_bytes = &image_bytes[HEADER..];
-    if image_bytes.len() * 2 % width as usize != 0 {
+    if !(image_bytes.len() * 2).is_multiple_of(width as usize) {
         state.log_error(HostError::InvalidWidth);
         return;
     }
     let canvas = Canvas::new(ptr + HEADER as u32, len - HEADER as u32, width);
+    state.canvas = Some(canvas)
+}
+
+fn set_canvas_v2(state: &mut Box<State<'_>>, ptr: u32, len: u32, image_bytes: &[u8]) {
+    let width = u16::from_le_bytes([image_bytes[1], image_bytes[2]]) as u32;
+    let image_bytes = &image_bytes[3..];
+    if !(image_bytes.len() * 2).is_multiple_of(width as usize) {
+        state.log_error(HostError::InvalidWidth);
+        return;
+    }
+    let canvas = Canvas::new(ptr + 3, len - 3, width);
     state.canvas = Some(canvas)
 }
 
