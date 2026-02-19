@@ -224,7 +224,7 @@ pub(crate) fn get_friend<'b>(
 fn insert_my_score(scores: &mut [i16; 8], new_score: i16) {
     let mut idx = None;
     for (i, old_score) in scores.iter().enumerate() {
-        if new_score > *old_score {
+        if new_score > *old_score || *old_score == 0 {
             idx = Some(i);
             break;
         }
@@ -244,7 +244,7 @@ fn insert_friend_score(scores: &mut [FriendScore; 8], friend_id: u16, new_score:
     // Skip all scores higher than the new one.
     let mut start = 0;
     for friend in scores.iter() {
-        if new_score >= friend.score {
+        if new_score > friend.score || friend.score == 0 {
             break;
         }
         // If we already filled the scoreboard and the given friend
